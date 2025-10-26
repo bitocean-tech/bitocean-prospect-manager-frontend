@@ -1,33 +1,22 @@
-import axios, {
-  AxiosInstance,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from "axios";
-import { getAccessKey } from "../helpers/cookies";
+import axios, { type InternalAxiosRequestConfig } from "axios";
+import { getAccessKey } from "@/common/helpers/cookies";
 
 // Configuração base do cliente HTTP
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-// Criar instância do Axios
-const apiClient: AxiosInstance = axios.create({
-  baseURL,
-  timeout: 30000, // 30 segundos
-  headers: {
-    "Content-Type": "application/json",
-  },
+export const apiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "",
+  timeout: 10000,
 });
 
-// Interceptor de requisição - adiciona automaticamente o token de autorização
+// Interceptor para incluir automaticamente o token de autorização
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const accessKey = getAccessKey();
-
-    if (accessKey) {
-      // Garantir header Authorization
-      config.headers = config.headers || {};
-      config.headers["Authorization"] = `Bearer ${accessKey}`;
+    // Só adiciona o header se não foi explicitamente definido na requisição
+    if (!config.headers.Authorization) {
+      const accessKey = getAccessKey();
+      if (accessKey) {
+        config.headers.Authorization = `Bearer ${accessKey}`;
+      }
     }
-
     return config;
   },
   (error) => {
@@ -35,23 +24,12 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Interceptor de resposta - trata erros globalmente
+// Interceptor para tratamento de respostas
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    // Log do erro para debug (pode ser removido em produção)
-    console.error("API Error:", error.response?.data || error.message);
-
-    // Tratar erros específicos se necessário
-    if (error.response?.status === 401) {
-      // Token inválido ou expirado - pode redirecionar para login
-      console.warn("Token inválido ou expirado");
-    }
-
+    // Em caso de 401, poderia limpar cookies e redirecionar para login
+    // Mas deixamos isso para ser tratado nos componentes específicos
     return Promise.reject(error);
   }
 );
-
-export default apiClient;
