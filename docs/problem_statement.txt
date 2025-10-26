@@ -1,0 +1,127 @@
+Especificações — BitOcean Scraper Backend (MVP)
+
+Objetivo
+- Buscar até 60 resultados (3 páginas) via Google Places a partir de uma query livre.
+- Persistir somente itens novos, enriquecê-los imediatamente e retornar um relatório resumido dos novos itens.
+- Salvar o nicho padronizado enviado pelo frontend e, separadamente, a categoria retornada pelo Google.
+- Salvar dados de localização relevantes (cidade e estado) quando disponíveis.
+
+Escopo
+- Endpoints:
+  - POST /google-busines-scraper/search: busca, persiste, enriquece e retorna relatório.
+  - POST /google-busines-scraper/enrich: enriquece um item pontual por googlePlaceId.
+- Banco: Postgres via Prisma ORM.
+- Deduplicação sempre por googlePlaceId.
+- Sem observabilidade avançada, fila/queue ou geolocalização refinada — foco em MVP funcional.
+
+Regras de Negócio
+- A busca sempre envia apenas a query livre; o frontend envia também o nicho padronizado (niche), que será persistido em campo próprio.
+- A categoria do Google, quando disponível nos detalhes, é salva em campo separado e nunca substitui o nicho padronizado.
+- Persistir somente itens que não existem (chave única: googlePlaceId).
+- Itens novos devem ser enriquecidos imediatamente na mesma chamada de search.
+- Enriquecimento atualiza websiteUri, nationalPhoneNumber, normalizedPhoneE164, googlePrimaryCategory e localização (cidade, estado) quando disponível.
+- Manter controle de outreach: firstMessageSent=false por default; ao enviar primeira mensagem, setar firstMessageSent=true e firstMessageSentAt=now.
+- Estados de enriquecimento: 'pending' para recém-criados, 'enriched' após sucesso, 'failed' em caso de erro.
+
+Modelo de Dados (Prisma)
+Tabela Place
+- id                PK (UUID ou autoincrement conforme preferir)
+- googlePlaceId     string @unique
+- displayName       string
+- nicheSearched     string (nicho padronizado vindo do frontend)
+- googlePrimaryCategory string? (categoria do Google dos detalhes)
+- websiteUri        string?
+- nationalPhoneNumber   string?
+- normalizedPhoneE164   string? (telefone normalizado em E.164 quando possível)
+- city              string? (localização vinda dos detalhes do Google)
+- state             string? (localização vinda dos detalhes do Google)
+- firstMessageSent  boolean (controle de outreach; default false)
+- firstMessageSentAt datetime? (quando a primeira mensagem foi enviada)
+- enrichmentStatus  enum('pending'|'enriched'|'failed')
+- enrichedAt        datetime?
+- createdAt         datetime
+- updatedAt         datetime
+
+Observações de Modelagem
+- Deduplicação por googlePlaceId garante idempotência entre buscas.
+- Manter nicheSearched e googlePrimaryCategory separados preserva origem e evita conflito.
+- Campos city e state devem ser preenchidos a partir de 'addressComponents' ou campos equivalentes nos detalhes do Google quando presentes.
+
+Fluxo do Endpoint POST /google-busines-scraper/search
+Entrada
+- Body: { query: string, niche: string }
+Processo
+1) Buscar até 3 páginas (pageSize=20, máximo 60 lugares) usando a query.
+2) Mapear resultados para payload mínimo: { googlePlaceId, displayName }.
+3) Persistir em lote com createMany({ skipDuplicates: true }), definindo nicheSearched=niche e enrichmentStatus='pending' para itens novos.
+4) Identificar itens novos (persistidos agora) e enriquecer cada um:
+   - Chamar detalhes do Place via API do Google.
+   - Atualizar: websiteUri, nationalPhoneNumber, normalizedPhoneE164, googlePrimaryCategory.
+   - Extrair city e state dos detalhes (quando disponíveis) e salvar.
+   - Marcar enrichmentStatus='enriched' e enrichedAt=now.
+   - Em caso de erro: enrichmentStatus='failed'.
+5) Montar relatório apenas dos novos itens.
+Saída (Relatório)
+- {
+    totalFetched: number,
+    newSavedCount: number,
+    alreadyExistingCount: number,
+    enrichedCount: number,
+    failedCount: number,
+    pendingCount: number,
+    items: Array<{
+      googlePlaceId: string,
+      displayName: string,
+      nicheSearched: string,
+      googlePrimaryCategory?: string,
+      websiteUri?: string,
+      normalizedPhoneE164?: string,
+      city?: string,
+      state?: string,
+      enrichmentStatus: 'enriched'|'failed'|'pending'
+    }>
+  }
+
+Endpoint POST /google-busines-scraper/enrich
+Entrada
+- Body: { googlePlaceId: string }
+Processo
+- Buscar Place por googlePlaceId.
+- Chamar detalhes do Google para esse Place.
+- Atualizar campos de detalhes e localização (cidade, estado), normalizar telefone.
+- Marcar enrichmentStatus conforme sucesso/falha.
+Saída
+- { status: 'enriched'|'failed', updatedFields: { websiteUri?, nationalPhoneNumber?, normalizedPhoneE164?, googlePrimaryCategory?, city?, state? }, error?: string }
+
+Deduplicação
+- Sempre por googlePlaceId; createMany({ skipDuplicates: true }) garante inserção sem duplicar.
+
+Critérios de Aceitação
+- Nenhum Place duplicado por googlePlaceId.
+- Todos os novos itens possuem nicheSearched preenchido.
+- Quando disponível, googlePrimaryCategory, city e state são salvos nos detalhes.
+- Relatório retorna somente novos itens desta execução e contagens corretas.
+
+Restrições e Simplicidade de MVP
+- Enriquecimento é realizado imediatamente dentro da chamada de search.
+- Concorrência mínima e fixa (p.ex. até 3–5 chamadas simultâneas) para evitar complexidade.
+- Sem filas/background jobs neste MVP.
+
+Boas Práticas e Estilo de Código
+- Priorizar código simples, direto e pouco verboso.
+- Implementar algoritmos objetivos que resolvam o problema com consistência.
+- Evitar over-engineering e abstrações desnecessárias; preferir funções pequenas e coesas.
+- Nomenclatura clara e consistente; manter padrão do projeto.
+- Tratamento de erros objetivo com mensagens sucintas; evitar logs excessivos.
+- Manter responsabilidade única por módulo/serviço; evitar efeitos colaterais.
+- Adotar early returns, estruturas lineares e evitar complexidade ciclomatica elevada.
+- Documentar apenas o essencial; comentários apenas onde agreguem contexto real.
+
+Próximos Passos
+- Definir enum e campos no schema Prisma com índices adequados.
+- Incluir firstMessageSent (boolean, default false) e firstMessageSentAt (datetime?) no schema, com índice para consultas de outreach.
+- Implementar fluxo de search e enrich conforme especificado.
+- Normalizar telefone para E.164 quando possível.
+- Planejar automação de outreach: endpoint/serviço futuro que filtra Places com firstMessageSent=false e dados mínimos (phone/website), executa envio e atualiza firstMessageSent=true e firstMessageSentAt.
+- Testar com queries reais e validar contagens e campos.
+- Documentar auditoria mínima: quem/como enviou a mensagem (em versão futura).
