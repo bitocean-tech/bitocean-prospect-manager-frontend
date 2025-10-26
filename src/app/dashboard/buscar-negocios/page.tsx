@@ -290,48 +290,48 @@ export default function BuscarNegociosPage() {
 
       {/* Tabela de Resultados */}
       {!isSearching && searchResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Resultados da Busca</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {searchResults.items.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Nenhum resultado encontrado.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Status</TableHead>
+        <Card>
+          <CardHeader>
+            <CardTitle>Resultados da Busca</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {searchResults.items.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Nenhum resultado encontrado.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {searchResults.items.map((item) => (
+                      <TableRow key={item.googlePlaceId}>
+                        <TableCell className="font-medium">
+                          {item.displayName}
+                        </TableCell>
+                        <TableCell>
+                          {item.googlePrimaryCategory || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">novo</Badge>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {searchResults.items.map((item) => (
-                        <TableRow key={item.googlePlaceId}>
-                          <TableCell className="font-medium">
-                            {item.displayName}
-                          </TableCell>
-                          <TableCell>
-                            {item.googlePrimaryCategory || "-"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">novo</Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
