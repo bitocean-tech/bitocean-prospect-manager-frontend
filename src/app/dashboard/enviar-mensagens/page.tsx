@@ -7,13 +7,16 @@ export default function EnviarMensagensPage() {
           Gerencie e envie mensagens para seus prospects de forma eficiente.
         </p>
       </div>
-      
+
       <div className="rounded-lg border bg-card p-6">
-        <h2 className="text-xl font-semibold mb-4">Funcionalidade em desenvolvimento</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Funcionalidade em desenvolvimento
+        </h2>
         <p className="text-muted-foreground">
-          Esta página será implementada em fases futuras com funcionalidades de envio de mensagens.
+          Esta página será implementada em fases futuras com funcionalidades de
+          envio de mensagens.
         </p>
       </div>
     </div>
-  )
+  );
 }

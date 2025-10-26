@@ -21,7 +21,9 @@ export class BusinessService {
   /**
    * Executa busca de negócios por termo e nicho
    */
-  static async searchBusinesses(request: SearchRequest): Promise<SearchResponse> {
+  static async searchBusinesses(
+    request: SearchRequest
+  ): Promise<SearchResponse> {
     const response = await apiClient.post<SearchResponse>(
       "/google-busines-scraper/search",
       request
