@@ -43,7 +43,7 @@ import type { Niche, SearchResponse } from "@/common/interfaces";
 
 export default function BuscarNegociosPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedNiche, setSelectedNiche] = useState("");
+  const [selectedNiche, setSelectedNiche] = useState<Niche | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(
     null
   );
@@ -80,7 +80,7 @@ export default function BuscarNegociosPage() {
 
     searchMutation.mutate({
       query: searchTerm.trim(),
-      niche: selectedNiche,
+      niche: selectedNiche?.standardizedName,
     });
   };
 
@@ -126,8 +126,14 @@ export default function BuscarNegociosPage() {
                 <Skeleton className="h-10 w-full" />
               ) : (
                 <Select
-                  value={selectedNiche}
-                  onValueChange={setSelectedNiche}
+                  value={selectedNiche?.standardizedName}
+                  onValueChange={(value) =>
+                    setSelectedNiche(
+                      niches?.find(
+                        (niche) => niche.standardizedName === value
+                      ) || null
+                    )
+                  }
                   disabled={isSearching}
                 >
                   <SelectTrigger id="niche-select">
