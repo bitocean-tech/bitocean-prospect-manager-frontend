@@ -4,7 +4,7 @@ import { getAccessKey } from "@/common/helpers/cookies";
 // Configuração base do cliente HTTP
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "",
-  timeout: 10000,
+  timeout: 90000, // 90 segundos para suportar requisições longas como busca de negócios
 });
 
 // Interceptor para incluir automaticamente o token de autorização
