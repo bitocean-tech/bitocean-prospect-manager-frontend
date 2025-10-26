@@ -40,6 +40,7 @@ import {
   type SearchRequest,
 } from "@/common/services/businessService";
 import type { Niche, SearchResponse } from "@/common/interfaces";
+import { SearchLoadingState } from "@/common/components/SearchLoadingState";
 
 export default function BuscarNegociosPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -184,15 +185,7 @@ export default function BuscarNegociosPage() {
 
       {/* Cards de Métricas */}
       {isSearching ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <Skeleton className="h-16 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <SearchLoadingState />
       ) : (
         searchResults && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -296,17 +289,7 @@ export default function BuscarNegociosPage() {
       )}
 
       {/* Tabela de Resultados */}
-      {isSearching ? (
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
-      ) : (
-        searchResults && (
+      {!isSearching && searchResults && (
           <Card>
             <CardHeader>
               <CardTitle>Resultados da Busca</CardTitle>
@@ -348,8 +331,7 @@ export default function BuscarNegociosPage() {
               )}
             </CardContent>
           </Card>
-        )
-      )}
+        )}
     </div>
   );
 }
