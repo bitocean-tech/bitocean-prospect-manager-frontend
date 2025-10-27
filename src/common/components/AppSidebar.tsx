@@ -22,8 +22,8 @@ const menuItems = [
     icon: Search,
   },
   {
-    title: "Enviar mensagens",
-    url: "/dashboard/enviar-mensagens",
+    title: "Gerenciar Prospects",
+    url: "/dashboard/gerenciar-prospects",
     icon: Send,
   },
 ];
