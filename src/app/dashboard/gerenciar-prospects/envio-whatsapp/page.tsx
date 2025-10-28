@@ -12,7 +12,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowLeft, MessageSquare, Phone, User, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  MessageSquare,
+  Phone,
+  User,
+  AlertCircle,
+} from "lucide-react";
 import { useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
 
 export default function EnvioWhatsappPage() {
@@ -28,15 +34,11 @@ export default function EnvioWhatsappPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={handleGoBack}
-            className="mb-4"
-          >
+          <Button variant="ghost" onClick={handleGoBack} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar para Gerenciar Prospects
           </Button>
-          
+
           <div className="flex items-center gap-3 mb-2">
             <MessageSquare className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold">Envio de Mensagens WhatsApp</h1>
@@ -49,7 +51,8 @@ export default function EnvioWhatsappPage() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Nenhum prospect foi selecionado. Volte para a tela de gerenciar prospects e selecione os contatos que deseja enviar mensagens.
+            Nenhum prospect foi selecionado. Volte para a tela de gerenciar
+            prospects e selecione os contatos que deseja enviar mensagens.
           </AlertDescription>
         </Alert>
 
@@ -67,15 +70,11 @@ export default function EnvioWhatsappPage() {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={handleGoBack}
-          className="mb-4"
-        >
+        <Button variant="ghost" onClick={handleGoBack} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar para Gerenciar Prospects
         </Button>
-        
+
         <div className="flex items-center gap-3 mb-2">
           <MessageSquare className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold">Envio de Mensagens WhatsApp</h1>
@@ -97,25 +96,27 @@ export default function EnvioWhatsappPage() {
           <div className="flex items-center gap-4">
             <Dialog>
               <DialogTrigger asChild>
-                <Badge 
-                  variant="secondary" 
+                <Badge
+                  variant="secondary"
                   className="text-lg px-4 py-2 cursor-pointer hover:bg-secondary/80 transition-colors"
                 >
-                  {selectedItems.length} contato{selectedItems.length !== 1 ? "s" : ""} selecionado{selectedItems.length !== 1 ? "s" : ""}
+                  {selectedItems.length} contato
+                  {selectedItems.length !== 1 ? "s" : ""} selecionado
+                  {selectedItems.length !== 1 ? "s" : ""}
                 </Badge>
               </DialogTrigger>
-              <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[90vw] md:max-w-[750px] max-h-[70vh] overflow-y-auto bg-card">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
                     Contatos Selecionados ({selectedItems.length})
                   </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 mt-4">
+                <div className="space-y-1 mt-4">
                   {selectedItems.map((item, index) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between p-4 border rounded-lg bg-background"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
@@ -126,29 +127,30 @@ export default function EnvioWhatsappPage() {
                         <div>
                           <h4 className="font-medium">{item.displayName}</h4>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            {(item.normalizedPhoneE164 || item.nationalPhoneNumber) && (
+                            {(item.normalizedPhoneE164 ||
+                              item.nationalPhoneNumber) && (
                               <div className="flex items-center gap-1">
                                 <Phone className="h-3 w-3" />
                                 <span>
-                                  {item.normalizedPhoneE164 || item.nationalPhoneNumber}
+                                  {item.normalizedPhoneE164 ||
+                                    item.nationalPhoneNumber}
                                 </span>
                               </div>
                             )}
                             {item.city && item.state && (
-                              <span>{item.city}, {item.state}</span>
+                              <span>
+                                {item.city}, {item.state}
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">
-                          {item.nicheSearched}
-                        </Badge>
-                        {!item.normalizedPhoneE164 && !item.nationalPhoneNumber && (
-                          <Badge variant="destructive">
-                            Sem telefone
-                          </Badge>
-                        )}
+                        <Badge variant="outline">{item.nicheSearched}</Badge>
+                        {!item.normalizedPhoneE164 &&
+                          !item.nationalPhoneNumber && (
+                            <Badge variant="destructive">Sem telefone</Badge>
+                          )}
                       </div>
                     </div>
                   ))}
@@ -161,8 +163,6 @@ export default function EnvioWhatsappPage() {
           </div>
         </CardContent>
       </Card>
-
-
 
       {/* Debug: Informações do contexto */}
       <Card className="mt-6 border-dashed">
