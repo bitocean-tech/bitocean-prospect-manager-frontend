@@ -22,7 +22,7 @@ export function SelectedProspectsBar() {
           {/* Informações de seleção */}
           <div className="flex items-center gap-3">
             {selectedItems.length > 0 ? (
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              <Badge variant="outline" className="px-4 py-2 ">
                 {selectedItems.length} prospect
                 {selectedItems.length !== 1 ? "s" : ""} selecionado
                 {selectedItems.length !== 1 ? "s" : ""}
