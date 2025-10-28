@@ -67,8 +67,6 @@
   - Chamar `POST /whatsapp/sendWhatsappMessage`.
   - Em caso de sucesso (`success === true`): incrementar contador de sucesso.
   - Em caso de erro (HTTP ou `success === false`): registrar falha, continuar para o próximo.
-- Intervalo: 8 segundos entre envios; não interromper operação em falhas.
-- Telemetria de progresso: exibir contadores `enviados`, `falhas`, `restantes` e status corrente (ex.: "Enviando para <displayName>").
 
 ## Relatório Final
 - Ao concluir todos os envios, apresentar um resumo:

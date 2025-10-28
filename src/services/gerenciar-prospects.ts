@@ -32,4 +32,19 @@ export class GerenciarProspectsService {
     const response = await apiClient.get<Template[]>("/templates");
     return response.data;
   }
+
+  /**
+   * Envia mensagem WhatsApp para um contato
+   */
+  static async sendWhatsappMessage(payload: {
+    text: string;
+    number: string;
+    googlePlaceId?: string;
+  }): Promise<{ success: boolean; message?: string; error?: string }> {
+    const response = await apiClient.post<{ success: boolean; message?: string; error?: string }>(
+      "/whatsapp/sendWhatsappMessage",
+      payload
+    );
+    return response.data;
+  }
 }
