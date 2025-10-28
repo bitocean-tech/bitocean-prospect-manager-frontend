@@ -22,11 +22,20 @@ interface ProspectsTableProps {
 }
 
 export function ProspectsTable({ data, isLoading = false, onSelectAll }: ProspectsTableProps) {
-  const { selectedItems, toggleSelection, isSelected } = useGerenciarProspects();
+  const { selectedItems, toggleSelection, isSelected, selectAll, clearSelection } = useGerenciarProspects();
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked && onSelectAll) {
-      onSelectAll(data);
+  const handleSelectAll = (checked: boolean | "indeterminate") => {
+    const isChecked = checked === true;
+    if (isChecked) {
+      if (onSelectAll) {
+        onSelectAll(data);
+      } else {
+        // Fallback para selecionar todos via contexto quando nenhuma função externa é passada
+        selectAll(data);
+      }
+    } else {
+      // Ao desmarcar, limpar todas as seleções para refletir o estado do header checkbox
+      clearSelection();
     }
   };
 
@@ -72,14 +81,15 @@ export function ProspectsTable({ data, isLoading = false, onSelectAll }: Prospec
           <TableRow>
             <TableHead className="w-12">
               <Checkbox
-                checked={allCurrentPageSelected}
-                onCheckedChange={handleSelectAll}
+                checked={
+                  allCurrentPageSelected
+                    ? true
+                    : someCurrentPageSelected
+                    ? "indeterminate"
+                    : false
+                }
+                onCheckedChange={(checked) => handleSelectAll(checked)}
                 aria-label="Selecionar todos da página atual"
-                ref={(el) => {
-                  if (el) {
-                    el.indeterminate = someCurrentPageSelected && !allCurrentPageSelected;
-                  }
-                }}
               />
             </TableHead>
             <TableHead className="w-[320px]">Nome do Negócio</TableHead>
