@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,11 +47,23 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          {/* Logo placeholder - será substituído por logo real */}
-          <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-xl">
-              PM
-            </span>
+          <Image
+            src="/logo.svg"
+            alt="Bitocean Prospect Manager"
+            width={64}
+            height={64}
+            className="mx-auto hidden"
+            priority
+          />
+          <div className="mx-auto w-16 h-16 rounded-full overflow-hidden flex items-center justify-center">
+            <Image
+              src="/logo.svg"
+              alt="Bitocean Prospect Manager"
+              width={64}
+              height={64}
+              className="w-full h-full object-cover"
+              priority
+            />
           </div>
           <h1 className="text-2xl font-semibold text-foreground">
             Prospect Manager
