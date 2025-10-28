@@ -41,3 +41,10 @@ export interface ListPlacesResponse {
 export interface SelectedProspects {
   selectedItems: PlaceItem[];
 }
+
+export interface Template {
+  id: string;
+  title: string;
+  content: string;
+  tag: string;
+}

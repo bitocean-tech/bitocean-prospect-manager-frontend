@@ -1,6 +1,6 @@
 import { apiClient } from "@/common/services/apiClient";
 import type { Niche } from "@/common/interfaces";
-import type { ListPlacesQuery, ListPlacesResponse } from "@/types/gerenciar-prospects";
+import type { ListPlacesQuery, ListPlacesResponse, Template } from "@/types/gerenciar-prospects";
 
 /**
  * Serviço para operações da funcionalidade Gerenciar Prospects
@@ -22,6 +22,14 @@ export class GerenciarProspectsService {
    */
   static async getNiches(): Promise<Niche[]> {
     const response = await apiClient.get<Niche[]>("/niches");
+    return response.data;
+  }
+
+  /**
+   * Busca lista de templates disponíveis
+   */
+  static async getTemplates(): Promise<Template[]> {
+    const response = await apiClient.get<Template[]>("/templates");
     return response.data;
   }
 }
