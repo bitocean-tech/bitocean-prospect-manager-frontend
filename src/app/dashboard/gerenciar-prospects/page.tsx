@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Users } from "lucide-react";
-import { GerenciarProspectsProvider, useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
+import {
+  GerenciarProspectsProvider,
+  useGerenciarProspects,
+} from "@/contexts/GerenciarProspectsContext";
 import { ProspectsFilters } from "@/components/gerenciar-prospects/ProspectsFilters";
 import { ProspectsTable } from "@/components/gerenciar-prospects/ProspectsTable";
 import { ProspectsPagination } from "@/components/gerenciar-prospects/ProspectsPagination";
@@ -12,7 +15,8 @@ import { SelectedProspectsBar } from "@/components/gerenciar-prospects/SelectedP
 import { GerenciarProspectsService } from "@/services/gerenciar-prospects";
 
 function GerenciarProspectsContent() {
-  const { filters, setFilters, selectAll, clearSelection } = useGerenciarProspects();
+  const { filters, setFilters, selectAll, clearSelection } =
+    useGerenciarProspects();
 
   // Query para buscar prospects
   const {
@@ -44,7 +48,10 @@ function GerenciarProspectsContent() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Erro ao carregar prospects: {placesError instanceof Error ? placesError.message : 'Erro desconhecido'}
+            Erro ao carregar prospects:{" "}
+            {placesError instanceof Error
+              ? placesError.message
+              : "Erro desconhecido"}
           </AlertDescription>
         </Alert>
       </div>
@@ -52,7 +59,7 @@ function GerenciarProspectsContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 pb-20">
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -60,7 +67,8 @@ function GerenciarProspectsContent() {
           <h1 className="text-3xl font-bold">Gerenciar Prospects</h1>
         </div>
         <p className="text-muted-foreground">
-          Gerencie e organize seus prospects com filtros avançados e ações em lote.
+          Gerencie e organize seus prospects com filtros avançados e ações em
+          lote.
         </p>
       </div>
 
@@ -74,6 +82,9 @@ function GerenciarProspectsContent() {
         </CardContent>
       </Card>
 
+      {/* Barra de seleção */}
+      <SelectedProspectsBar />
+
       {/* Resultados */}
       <Card>
         <CardHeader>
@@ -81,7 +92,8 @@ function GerenciarProspectsContent() {
             <span>Resultados</span>
             {placesData && placesData.total !== undefined && (
               <span className="text-sm font-normal text-muted-foreground">
-                {placesData.total} prospect{placesData.total !== 1 ? 's' : ''} encontrado{placesData.total !== 1 ? 's' : ''}
+                {placesData.total} prospect{placesData.total !== 1 ? "s" : ""}{" "}
+                encontrado{placesData.total !== 1 ? "s" : ""}
               </span>
             )}
           </CardTitle>
@@ -92,7 +104,7 @@ function GerenciarProspectsContent() {
             isLoading={isLoadingPlaces}
             onSelectAll={handleSelectAll}
           />
-          
+
           {placesData && placesData.items && placesData.items.length > 0 && (
             <ProspectsPagination
               data={placesData}
@@ -103,9 +115,6 @@ function GerenciarProspectsContent() {
           )}
         </CardContent>
       </Card>
-
-      {/* Barra de seleção fixa */}
-      <SelectedProspectsBar />
     </div>
   );
 }
