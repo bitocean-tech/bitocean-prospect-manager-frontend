@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ArrowLeft, MessageSquare, Phone, User, AlertCircle } from "lucide-react";
 import { useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
 
@@ -88,9 +95,66 @@ export default function EnvioWhatsappPage() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <Badge variant="secondary" className="text-lg px-4 py-2">
-              {selectedItems.length} contato{selectedItems.length !== 1 ? "s" : ""} selecionado{selectedItems.length !== 1 ? "s" : ""}
-            </Badge>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Badge 
+                  variant="secondary" 
+                  className="text-lg px-4 py-2 cursor-pointer hover:bg-secondary/80 transition-colors"
+                >
+                  {selectedItems.length} contato{selectedItems.length !== 1 ? "s" : ""} selecionado{selectedItems.length !== 1 ? "s" : ""}
+                </Badge>
+              </DialogTrigger>
+              <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Contatos Selecionados ({selectedItems.length})
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  {selectedItems.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {index + 1}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{item.displayName}</h4>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {(item.normalizedPhoneE164 || item.nationalPhoneNumber) && (
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                <span>
+                                  {item.normalizedPhoneE164 || item.nationalPhoneNumber}
+                                </span>
+                              </div>
+                            )}
+                            {item.city && item.state && (
+                              <span>{item.city}, {item.state}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {item.nicheSearched}
+                        </Badge>
+                        {!item.normalizedPhoneE164 && !item.nationalPhoneNumber && (
+                          <Badge variant="destructive">
+                            Sem telefone
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
             <p className="text-muted-foreground">
               Pronto para envio de mensagens WhatsApp
             </p>
@@ -98,56 +162,7 @@ export default function EnvioWhatsappPage() {
         </CardContent>
       </Card>
 
-      {/* Lista dos prospects selecionados */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Contatos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {selectedItems.map((item, index) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary">
-                      {index + 1}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">{item.displayName}</h4>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      {(item.normalizedPhoneE164 || item.nationalPhoneNumber) && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          <span>
-                            {item.normalizedPhoneE164 || item.nationalPhoneNumber}
-                          </span>
-                        </div>
-                      )}
-                      {item.city && item.state && (
-                        <span>{item.city}, {item.state}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    {item.nicheSearched}
-                  </Badge>
-                  {!item.normalizedPhoneE164 && !item.nationalPhoneNumber && (
-                    <Badge variant="destructive">
-                      Sem telefone
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Debug: Informações do contexto */}
       <Card className="mt-6 border-dashed">
