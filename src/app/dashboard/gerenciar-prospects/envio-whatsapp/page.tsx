@@ -30,6 +30,7 @@ import {
   User,
   AlertCircle,
   Settings,
+  MessageCircle,
 } from "lucide-react";
 import { useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
 import { GerenciarProspectsService } from "@/services/gerenciar-prospects";
@@ -40,6 +41,8 @@ export default function EnvioWhatsappPage() {
   const { selectedItems } = useGerenciarProspects();
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [messageContent, setMessageContent] = useState<string>("");
+  const [sendInterval, setSendInterval] = useState<string>("");
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
 
   // Buscar templates usando React Query
   const {
@@ -62,6 +65,36 @@ export default function EnvioWhatsappPage() {
       setMessageContent(template.content);
     }
   };
+
+  const handleSendMessages = () => {
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmSend = () => {
+    console.log("=== DADOS DO ENVIO ===");
+    console.log("Prospects selecionados:", selectedItems.length);
+    console.log("Mensagem:", messageContent);
+    console.log("Intervalo entre envios:", sendInterval, "segundos");
+    console.log("Template usado:", selectedTemplate || "Nenhum");
+    console.log("Dados dos prospects:", selectedItems);
+    console.log("=====================");
+    setIsConfirmModalOpen(false);
+  };
+
+  // Função para verificar se um número de telefone é válido
+  const isValidPhoneNumber = (phone: string | null | undefined): boolean => {
+    if (!phone) return false;
+    // Remove espaços, parênteses, hífens e outros caracteres especiais
+    const cleanPhone = phone.replace(/[\s\(\)\-\+]/g, '');
+    // Verifica se tem pelo menos 10 dígitos (formato brasileiro mínimo)
+    return /^\d{10,}$/.test(cleanPhone);
+  };
+
+  // Calcular estatísticas dos contatos
+  const contactsWithPhone = selectedItems.filter(item => isValidPhoneNumber(item.nationalPhoneNumber));
+  const contactsWithoutPhone = selectedItems.filter(item => !isValidPhoneNumber(item.nationalPhoneNumber));
+
+
 
   // Se não há itens selecionados, exibe estado vazio
   if (selectedItems.length === 0) {
@@ -195,6 +228,9 @@ export default function EnvioWhatsappPage() {
               Pronto para envio de mensagens WhatsApp
             </p>
           </div>
+
+
+
         </CardContent>
       </Card>
 
@@ -207,33 +243,49 @@ export default function EnvioWhatsappPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Select de Templates */}
-          <div className="space-y-2">
-            <Label htmlFor="template-select">Template de Mensagem</Label>
-            {templatesError && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Erro ao carregar templates. Tente novamente.
-                </AlertDescription>
-              </Alert>
-            )}
-            <Select
-              value={selectedTemplate}
-              onValueChange={handleTemplateChange}
-              disabled={isLoadingTemplates}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um modelo" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Select de Templates e Intervalo na mesma linha */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="template-select">Template de Mensagem</Label>
+              {templatesError && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Erro ao carregar templates. Tente novamente.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <Select
+                value={selectedTemplate}
+                onValueChange={handleTemplateChange}
+                disabled={isLoadingTemplates}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um modelo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="send-interval">Intervalo entre envios</Label>
+              <Select value={sendInterval} onValueChange={setSendInterval}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o intervalo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="4">4 segundos</SelectItem>
+                  <SelectItem value="8">8 segundos</SelectItem>
+                  <SelectItem value="10">10 segundos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Textarea para a mensagem */}
@@ -251,10 +303,130 @@ export default function EnvioWhatsappPage() {
               Você pode editar livremente a mensagem após selecionar um template.
             </p>
           </div>
+
+          {/* Botão de Envio WhatsApp */}
+          <Button
+            onClick={handleSendMessages}
+            disabled={!messageContent || !sendInterval}
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+          >
+            <MessageCircle className="mr-2 h-4 w-4" />
+            Enviar para Selecionados
+          </Button>
         </CardContent>
       </Card>
 
+      {/* Modal de Confirmação */}
+      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+              Confirmar Envio WhatsApp
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Prévia da Mensagem */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Mensagem:</h4>
+              <div className="bg-muted p-3 rounded-md border max-h-40 overflow-y-auto">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {messageContent}
+                </p>
+              </div>
+            </div>
 
+            {/* Estatísticas dos Contatos */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Resumo do Envio:</h4>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-md border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Serão Enviados
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold text-green-700 dark:text-green-300 mt-1">
+                    {contactsWithPhone.length}
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    contatos com telefone
+                  </p>
+                </div>
+
+                <div className="bg-orange-50 dark:bg-orange-950/30 p-3 rounded-md border border-orange-200 dark:border-orange-800">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                      Serão Ignorados
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold text-orange-700 dark:text-orange-300 mt-1">
+                    {contactsWithoutPhone.length}
+                  </p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                    sem telefone válido
+                  </p>
+                </div>
+              </div>
+
+              {/* Informações Adicionais */}
+              <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-blue-700 dark:text-blue-300">Total selecionado:</span>
+                    <span className="font-medium text-blue-800 dark:text-blue-200">{selectedItems.length}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-blue-700 dark:text-blue-300">Intervalo:</span>
+                    <span className="font-medium text-blue-800 dark:text-blue-200">{sendInterval} segundos</span>
+                  </div>
+                  {selectedTemplate && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-blue-700 dark:text-blue-300">Template:</span>
+                      <span className="font-medium text-blue-800 dark:text-blue-200">
+                        {templates.find(t => t.id === selectedTemplate)?.title || 'Personalizado'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmSend}
+                className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
+                disabled={contactsWithPhone.length === 0}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Confirmar Envio
+              </Button>
+            </div>
+
+            {/* Aviso se não há contatos válidos */}
+            {contactsWithPhone.length === 0 && (
+              <Alert className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
+                <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <AlertDescription className="text-orange-800 dark:text-orange-200">
+                  Nenhum contato possui número de telefone válido para envio.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
