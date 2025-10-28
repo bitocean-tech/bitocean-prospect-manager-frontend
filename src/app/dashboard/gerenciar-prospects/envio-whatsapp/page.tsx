@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -33,12 +33,13 @@ import {
   User,
   XCircle,
   FileText,
+  Clock,
 } from "lucide-react";
 import { useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
 import { GerenciarProspectsService } from "@/services/gerenciar-prospects";
-import { WhatsAppSendingState } from "@/components/envio-whatsapp/WhatsAppSendingState";
+// Removido componente de loading durante envio
 import { formatPhoneForWhatsApp, isValidPhoneNumber } from "@/utils/phone";
-import type { Template } from "@/types/gerenciar-prospects";
+import { useSending } from "@/contexts/SendingContext";
 
 // Estados da página
 type PageState = "configuration" | "sending" | "completed";
@@ -59,6 +60,22 @@ interface SendResult {
 export default function EnvioWhatsappPage() {
   const router = useRouter();
   const { selectedItems } = useGerenciarProspects();
+  const {
+    startSending,
+    stopSending,
+    isActive,
+    isWaiting: globalIsWaiting,
+    isSending: globalIsSending,
+    currentStep: globalCurrentStep,
+    successCount: globalSuccessCount,
+    failureCount: globalFailureCount,
+    currentContactIndex: globalCurrentContactIndex,
+    totalContacts,
+    countdown: globalCountdown,
+    sendResults: globalSendResults,
+    completed,
+    currentContact,
+  } = useSending();
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [messageContent, setMessageContent] = useState<string>("");
   const [sendInterval, setSendInterval] = useState<string>("");
@@ -66,13 +83,21 @@ export default function EnvioWhatsappPage() {
 
   // Estados do envio
   const [pageState, setPageState] = useState<PageState>("configuration");
-  const [currentContactIndex, setCurrentContactIndex] = useState<number>(0);
-  const [successCount, setSuccessCount] = useState<number>(0);
-  const [failureCount, setFailureCount] = useState<number>(0);
-  const [isWaiting, setIsWaiting] = useState<boolean>(false);
-  const [isSending, setIsSending] = useState<boolean>(false);
-  const [currentStep, setCurrentStep] = useState<string>("");
-  const [sendResults, setSendResults] = useState<SendResult[]>([]);
+
+  // Derivar estado de visualização priorizando configuração quando há seleção e nenhum envio ativo
+  const hasActiveGlobal = isActive || globalIsWaiting || globalIsSending;
+  const hasSelection = selectedItems.length > 0;
+  const viewState: PageState = hasActiveGlobal
+    ? "sending"
+    : completed && !hasSelection
+    ? "completed"
+    : pageState;
+
+  const formatTime = (seconds: number): string => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
 
   // Buscar templates usando React Query
   const {
@@ -104,6 +129,26 @@ export default function EnvioWhatsappPage() {
     });
   }, [selectedItems]);
 
+  const progress = validContacts.length
+    ? Math.min(
+        100,
+        Math.round(
+          ((globalSuccessCount + globalFailureCount) / validContacts.length) *
+            100
+        )
+      )
+    : 0;
+  // Base de contatos para cálculo de progresso: prioriza estado global (totalContacts)
+  const contactsBaseline = totalContacts || validContacts.length;
+  const globalProgress = contactsBaseline
+    ? Math.min(
+        100,
+        Math.round(
+          ((globalSuccessCount + globalFailureCount) / contactsBaseline) * 100
+        )
+      )
+    : 0;
+
   // Função para lidar com o envio de mensagens
   const handleSendMessages = () => {
     if (!messageContent || !sendInterval) return;
@@ -123,96 +168,10 @@ export default function EnvioWhatsappPage() {
   const handleConfirmSend = () => {
     setIsConfirmModalOpen(false);
     setPageState("sending");
-    startSendingProcess();
-  };
-
-  // Função para iniciar o processo de envio
-  const startSendingProcess = async () => {
-    const validContacts = selectedItems.filter((item) => {
-      const phone = item.normalizedPhoneE164 || item.nationalPhoneNumber;
-      return isValidPhoneNumber(phone);
-    });
-
-    setCurrentStep("Iniciando processo de envio...");
-
-    for (let i = 0; i < validContacts.length; i++) {
-      const contact = validContacts[i];
-      setCurrentContactIndex(i);
-
-      // Mostrar próximo contato
-      setCurrentStep(`Preparando envio para ${contact.displayName}`);
-
-      // Se não é o primeiro, aguardar intervalo
-      if (i > 0) {
-        setIsWaiting(true);
-        await waitForInterval(parseInt(sendInterval));
-        setIsWaiting(false);
-      }
-
-      // Enviar mensagem
-      setIsSending(true);
-      setCurrentStep(`Enviando mensagem para ${contact.displayName}`);
-
-      try {
-        const phone = formatPhoneForWhatsApp(
-          contact.normalizedPhoneE164 || contact.nationalPhoneNumber
-        );
-
-        if (!phone) {
-          throw new Error("Número de telefone inválido");
-        }
-
-        const result = await GerenciarProspectsService.sendWhatsappMessage({
-          text: messageContent,
-          number: phone,
-          googlePlaceId: contact.googlePlaceId,
-        });
-
-        const sendResult: SendResult = {
-          success: result.success,
-          contact: {
-            id: contact.id,
-            displayName: contact.displayName,
-            phone: phone,
-          },
-          error: result.error,
-        };
-
-        setSendResults((prev) => [...prev, sendResult]);
-
-        if (result.success) {
-          setSuccessCount((prev) => prev + 1);
-        } else {
-          setFailureCount((prev) => prev + 1);
-        }
-      } catch (error) {
-        const sendResult: SendResult = {
-          success: false,
-          contact: {
-            id: contact.id,
-            displayName: contact.displayName,
-            phone:
-              contact.normalizedPhoneE164 || contact.nationalPhoneNumber || "",
-          },
-          error: error instanceof Error ? error.message : "Erro desconhecido",
-        };
-
-        setSendResults((prev) => [...prev, sendResult]);
-        setFailureCount((prev) => prev + 1);
-      }
-
-      setIsSending(false);
-    }
-
-    // Finalizar processo
-    setPageState("completed");
-    setCurrentStep("Processo de envio finalizado");
-  };
-
-  // Função para aguardar intervalo
-  const waitForInterval = (seconds: number): Promise<void> => {
-    return new Promise((resolve) => {
-      setTimeout(resolve, seconds * 1000);
+    const intervalSeconds = parseInt(sendInterval) || 0;
+    // dispara envio global; conclusão será refletida via "completed"
+    startSending(selectedItems, messageContent, intervalSeconds).catch(() => {
+      // falhas são tratadas no provider; mantemos a página em sending/feedback
     });
   };
 
@@ -229,7 +188,11 @@ export default function EnvioWhatsappPage() {
   });
 
   // Se não há itens selecionados, exibe estado vazio
-  if (selectedItems.length === 0) {
+  // Se não há itens selecionados E nenhum envio está ativo/aguardando, exibe estado vazio
+  if (
+    selectedItems.length === 0 &&
+    !(isActive || globalIsWaiting || globalIsSending)
+  ) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
@@ -283,35 +246,144 @@ export default function EnvioWhatsappPage() {
         </p>
       </div>
 
-      {/* Estado de Envio */}
-      {pageState === "sending" && (
-        <WhatsAppSendingState
-          currentContact={
-            currentContactIndex < validContacts.length
-              ? {
-                  displayName: validContacts[currentContactIndex].displayName,
-                  id: validContacts[currentContactIndex].id,
-                  normalizedPhoneE164:
-                    validContacts[currentContactIndex].normalizedPhoneE164 ||
-                    undefined,
-                  nationalPhoneNumber:
-                    validContacts[currentContactIndex].nationalPhoneNumber ||
-                    undefined,
-                }
-              : null
-          }
-          totalContacts={validContacts.length}
-          successCount={successCount}
-          failureCount={failureCount}
-          intervalSeconds={parseInt(sendInterval)}
-          isWaiting={isWaiting}
-          isSending={isSending}
-          currentStep={currentStep}
-        />
+      {/* Estado de Envio - Texto com contagem e detalhes do próximo contato */}
+      {viewState === "sending" && (
+        <Card className="mb-6">
+          <CardContent className="space-y-4 py-6">
+            <div className="flex flex-wrap items-center gap-3 justify-between">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-primary" />
+                <span className="font-semibold">Envio em andamento</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Processados:{" "}
+                {Math.min(
+                  globalSuccessCount + globalFailureCount,
+                  contactsBaseline
+                )}{" "}
+                / {contactsBaseline}
+              </div>
+              <div className="flex-1" />
+              <Button size="sm" variant="outline" onClick={stopSending}>
+                Interromper Envio
+              </Button>
+            </div>
+
+            {/* Barra de progresso */}
+            <div className="space-y-2">
+              <div className="w-full bg-secondary/50 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 h-2 rounded-full transition-all duration-700 ease-out shadow-sm"
+                  style={{ width: `${globalProgress}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground font-medium">
+                <span>Progresso</span>
+                <span>{Math.round(globalProgress)}%</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-md border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 justify-center">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                    Sucessos
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1 text-center">
+                  {globalSuccessCount}
+                </p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-md border border-red-200 dark:border-red-800">
+                <div className="flex items-center gap-2 justify-center">
+                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  <span className="text-sm font-medium text-red-800 dark:text-red-200">
+                    Falhas
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-red-700 dark:text-red-300 mt-1 text-center">
+                  {globalFailureCount}
+                </p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2 justify-center">
+                  <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Pendentes
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1 text-center">
+                  {Math.max(
+                    contactsBaseline -
+                      (globalSuccessCount + globalFailureCount),
+                    0
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Próximo contato detalhado */}
+            {currentContact && (
+              <div className="bg-muted/30 dark:bg-muted/20 p-4 rounded-md border">
+                <p className="text-sm text-muted-foreground mb-1">
+                  Próximo contato:
+                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">
+                      {currentContact.displayName} (
+                      {Math.min(
+                        globalCurrentContactIndex + 1,
+                        contactsBaseline
+                      )}
+                      /{contactsBaseline})
+                    </p>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      {formatPhoneForWhatsApp(
+                        currentContact.normalizedPhoneE164 ||
+                          currentContact.nationalPhoneNumber ||
+                          ""
+                      ) ||
+                        currentContact.normalizedPhoneE164 ||
+                        currentContact.nationalPhoneNumber ||
+                        "Sem telefone"}
+                    </p>
+                  </div>
+                  {currentContact.googlePlaceId && (
+                    <p className="text-xs text-muted-foreground">
+                      Google Place ID: {currentContact.googlePlaceId}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {globalCurrentStep}
+                </p>
+                {globalIsWaiting && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-xs text-blue-700 dark:text-blue-300">
+                      Próximo envio em
+                    </span>
+                    <span className="text-base font-mono font-bold text-blue-700 dark:text-blue-300 tracking-wider">
+                      {formatTime(globalCountdown)}
+                    </span>
+                  </div>
+                )}
+                {globalIsSending && (
+                  <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                    Enviando mensagem...
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Estado de Finalizado - Cards de Resumo */}
-      {pageState === "completed" && (
+      {viewState === "completed" && (
         <div className="space-y-6">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold mb-2">Envio Finalizado</h2>
@@ -322,19 +394,19 @@ export default function EnvioWhatsappPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Card de Sucessos */}
-            <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+            <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                <CardTitle className="flex items-center gap-2 text-green-800 dark:text-green-200">
                   <CheckCircle className="h-5 w-5" />
                   Mensagens Enviadas
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-700 dark:text-green-300 mb-2">
-                  {successCount}
+                  {globalSuccessCount}
                 </div>
                 <p className="text-sm text-green-600 dark:text-green-400">
-                  {successCount === 1
+                  {globalSuccessCount === 1
                     ? "mensagem enviada"
                     : "mensagens enviadas"}{" "}
                   com sucesso
@@ -343,19 +415,19 @@ export default function EnvioWhatsappPage() {
             </Card>
 
             {/* Card de Falhas */}
-            <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+            <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
                   <XCircle className="h-5 w-5" />
                   Falhas no Envio
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-red-700 dark:text-red-300 mb-2">
-                  {failureCount}
+                  {globalFailureCount}
                 </div>
                 <p className="text-sm text-red-600 dark:text-red-400">
-                  {failureCount === 1
+                  {globalFailureCount === 1
                     ? "mensagem falhou"
                     : "mensagens falharam"}{" "}
                   no envio
@@ -364,42 +436,9 @@ export default function EnvioWhatsappPage() {
             </Card>
           </div>
 
-          {/* Botões de Ação */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setPageState("configuration");
-                setCurrentContactIndex(0);
-                setSuccessCount(0);
-                setFailureCount(0);
-                setSendResults([]);
-                setCurrentStep("");
-              }}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar para Configuração
-            </Button>
-            <Button
-              onClick={() => {
-                setCurrentContactIndex(0);
-                setSuccessCount(0);
-                setFailureCount(0);
-                setSendResults([]);
-                setCurrentStep("");
-                startSendingProcess();
-              }}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Enviar Novamente
-            </Button>
-          </div>
-
           {/* Detalhes dos Resultados (opcional) */}
-          {sendResults.length > 0 && (
-            <Card className="mt-6">
+          {globalSendResults.length > 0 && (
+            <Card className="mt-6 ">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -407,14 +446,14 @@ export default function EnvioWhatsappPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {sendResults.map((result, index) => (
+                <div className="space-y-2 max-h-90 overflow-y-auto">
+                  {globalSendResults.map((result, index) => (
                     <div
                       key={index}
                       className={`flex items-center justify-between p-3 rounded-lg border ${
                         result.success
-                          ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800"
-                          : "bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800"
+                          ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800"
+                          : "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -448,7 +487,7 @@ export default function EnvioWhatsappPage() {
       )}
 
       {/* Card com contador de selecionados - apenas no estado de configuração */}
-      {pageState === "configuration" && (
+      {viewState === "configuration" && (
         <>
           <Card className="mb-6">
             <CardHeader>

@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/common/components/theme-provider";
 import { QueryProvider } from "@/common/components/query-provider";
 import { AuthGuard } from "@/common/components/auth-guard";
 import { Toaster } from "@/components/ui/sonner";
+import { SendingProvider } from "@/contexts/SendingContext";
+import { FloatingSendingStatus } from "@/components/envio-whatsapp/FloatingSendingStatus";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +38,12 @@ export default function RootLayout({
           storageKey="pm-theme"
         >
           <QueryProvider>
-            <AuthGuard>{children}</AuthGuard>
+            <AuthGuard>
+              <SendingProvider>
+                {children}
+                <FloatingSendingStatus />
+              </SendingProvider>
+            </AuthGuard>
             <Toaster />
           </QueryProvider>
         </ThemeProvider>
