@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Filter, RotateCcw, AlertCircle } from "lucide-react";
 import { useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
 import { GerenciarProspectsService } from "@/services/gerenciar-prospects";
-import { useDebounce } from "@/hooks/useDebounce";
 import type { ListPlacesQuery } from "@/types/gerenciar-prospects";
 
 interface ProspectsFiltersProps {
@@ -29,15 +28,13 @@ interface ProspectsFiltersProps {
 export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFiltersProps) {
   const { filters, setFilters, clearFilters } = useGerenciarProspects();
   
-  // Estados locais para inputs com debounce
+  // Estados locais dos campos do formulário (sem debounce)
   const [localState, setLocalState] = useState(filters.state || "");
   const [localCity, setLocalCity] = useState(filters.city || "");
   const [localCategory, setLocalCategory] = useState(filters.googlePrimaryCategoryLike || "");
-  
-  // Debounced values para inputs de texto
-  const debouncedState = useDebounce(localState, 500);
-  const debouncedCity = useDebounce(localCity, 500);
-  const debouncedCategory = useDebounce(localCategory, 500);
+  const [localNiche, setLocalNiche] = useState(filters.nicheSearched || "all");
+  const [localWebsite, setLocalWebsite] = useState(filters.hasWebsite || "all");
+  const [localFirstMessage, setLocalFirstMessage] = useState(filters.firstMessageSent || "all");
 
   // Query para carregar nichos
   const {
@@ -49,63 +46,46 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
     queryFn: GerenciarProspectsService.getNiches,
   });
 
-  // Atualiza filtros quando valores debounced mudam
-  useEffect(() => {
-    const updatedFilters = {
-      ...filters,
-      state: debouncedState || undefined,
-      city: debouncedCity || undefined,
-      googlePrimaryCategoryLike: debouncedCategory || undefined,
-    };
-    setFilters(updatedFilters);
-  }, [debouncedState, debouncedCity, debouncedCategory]);
+  // Removido: atualização automática de filtros via debounce
 
   const handleNicheChange = (value: string) => {
-    const updatedFilters = {
-      ...filters,
-      nicheSearched: value === "all" ? undefined : value,
-    };
-    setFilters(updatedFilters);
+    setLocalNiche(value);
   };
 
   const handleWebsiteChange = (value: string) => {
-    const updatedFilters = {
-      ...filters,
-      hasWebsite: value === "all" ? undefined : (value as 'true' | 'false'),
-    };
-    setFilters(updatedFilters);
+    setLocalWebsite(value);
   };
 
   const handleFirstMessageChange = (value: string) => {
-    const updatedFilters = {
-      ...filters,
-      firstMessageSent: value === "all" ? undefined : (value as 'true' | 'false'),
-    };
-    setFilters(updatedFilters);
+    setLocalFirstMessage(value);
   };
 
   const handleFilter = () => {
-    // Se onFilter foi fornecido, usa; caso contrário, apenas atualiza filtros
+    const appliedFilters: ListPlacesQuery = {
+      ...filters,
+      page: 1,
+      state: localState || undefined,
+      city: localCity || undefined,
+      googlePrimaryCategoryLike: localCategory || undefined,
+      nicheSearched: localNiche === "all" ? undefined : localNiche,
+      hasWebsite: localWebsite === "all" ? undefined : (localWebsite as 'true' | 'false'),
+      firstMessageSent: localFirstMessage === "all" ? undefined : (localFirstMessage as 'true' | 'false'),
+    };
+
     if (onFilter) {
-      onFilter(filters);
-    } else {
-      setFilters({ ...filters });
+      onFilter(appliedFilters);
     }
+    setFilters(appliedFilters);
   };
 
   const handleClear = () => {
     setLocalState("");
     setLocalCity("");
     setLocalCategory("");
+    setLocalNiche("all");
+    setLocalWebsite("all");
+    setLocalFirstMessage("all");
     clearFilters();
-    if (onFilter) {
-      onFilter({
-        page: 1,
-        pageSize: 20,
-      });
-    } else {
-      setFilters({ page: 1, pageSize: 20 });
-    }
   };
 
   return (
@@ -144,7 +124,7 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
             <Skeleton className="h-10 w-full" />
           ) : (
             <Select
-              value={filters.nicheSearched || "all"}
+              value={localNiche}
               onValueChange={handleNicheChange}
               disabled={isLoading}
             >
@@ -180,7 +160,7 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
         <div className="space-y-2">
           <Label htmlFor="website">Possui Website</Label>
           <Select
-            value={filters.hasWebsite || "all"}
+            value={localWebsite}
             onValueChange={handleWebsiteChange}
             disabled={isLoading}
           >
@@ -199,7 +179,7 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
         <div className="space-y-2">
           <Label htmlFor="firstMessage">Primeira Mensagem Enviada</Label>
           <Select
-            value={filters.firstMessageSent || "all"}
+            value={localFirstMessage}
             onValueChange={handleFirstMessageChange}
             disabled={isLoading}
           >

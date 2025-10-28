@@ -21,8 +21,18 @@ interface ProspectsTableProps {
   onSelectAll?: (items: PlaceItem[]) => void;
 }
 
-export function ProspectsTable({ data, isLoading = false, onSelectAll }: ProspectsTableProps) {
-  const { selectedItems, toggleSelection, isSelected, selectAll, clearSelection } = useGerenciarProspects();
+export function ProspectsTable({
+  data,
+  isLoading = false,
+  onSelectAll,
+}: ProspectsTableProps) {
+  const {
+    selectedItems,
+    toggleSelection,
+    isSelected,
+    selectAll,
+    clearSelection,
+  } = useGerenciarProspects();
 
   const handleSelectAll = (checked: boolean | "indeterminate") => {
     const isChecked = checked === true;
@@ -39,8 +49,9 @@ export function ProspectsTable({ data, isLoading = false, onSelectAll }: Prospec
     }
   };
 
-  const allCurrentPageSelected = data.length > 0 && data.every(item => isSelected(item));
-  const someCurrentPageSelected = data.some(item => isSelected(item));
+  const allCurrentPageSelected =
+    data.length > 0 && data.every((item) => isSelected(item));
+  const someCurrentPageSelected = data.some((item) => isSelected(item));
 
   if (isLoading) {
     return (
@@ -66,7 +77,9 @@ export function ProspectsTable({ data, isLoading = false, onSelectAll }: Prospec
         <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
           <XCircle className="h-12 w-12 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold mb-2">Nenhum resultado encontrado</h3>
+        <h3 className="text-lg font-semibold mb-2">
+          Nenhum resultado encontrado
+        </h3>
         <p className="text-muted-foreground mb-4">
           Tente ajustar os filtros para encontrar prospects.
         </p>
@@ -102,7 +115,7 @@ export function ProspectsTable({ data, isLoading = false, onSelectAll }: Prospec
         </TableHeader>
         <TableBody>
           {data.map((item) => (
-            <TableRow 
+            <TableRow
               key={item.id}
               className={isSelected(item) ? "bg-muted/50" : ""}
             >
@@ -118,18 +131,13 @@ export function ProspectsTable({ data, isLoading = false, onSelectAll }: Prospec
                   {item.displayName}
                 </span>
               </TableCell>
+              <TableCell>{item.googlePrimaryCategory || "-"}</TableCell>
               <TableCell>
-                {item.googlePrimaryCategory || "-"}
-              </TableCell>
-              <TableCell>
-                {item.city && item.state 
+                {item.city && item.state
                   ? `${item.city}, ${item.state}`
-                  : item.city || item.state || "-"
-                }
+                  : item.city || item.state || "-"}
               </TableCell>
-              <TableCell>
-                {item.nationalPhoneNumber || "-"}
-              </TableCell>
+              <TableCell>{item.nationalPhoneNumber || "-"}</TableCell>
               <TableCell>
                 {item.websiteUri ? (
                   <a
@@ -153,13 +161,14 @@ export function ProspectsTable({ data, isLoading = false, onSelectAll }: Prospec
               </TableCell>
               <TableCell>
                 {item.firstMessageSent ? (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-100 text-green-800"
+                  >
                     Enviada
                   </Badge>
                 ) : (
-                  <Badge variant="outline">
-                    Não enviada
-                  </Badge>
+                  <Badge variant="outline">Não enviada</Badge>
                 )}
               </TableCell>
             </TableRow>
