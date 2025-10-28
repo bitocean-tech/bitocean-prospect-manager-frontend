@@ -11,9 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
+import { useRouter } from "next/navigation";
 
 export function SelectedProspectsBar() {
   const { selectedItems } = useGerenciarProspects();
+  const router = useRouter();
 
   return (
     <Card className="mb-6 py-4">
@@ -50,8 +52,7 @@ export function SelectedProspectsBar() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={() => {
-                  // TODO: Implementar ação de envio de mensagem em lote
-                  console.log("Enviar mensagem para:", selectedItems);
+                  router.push("/dashboard/gerenciar-prospects/envio-whatsapp");
                 }}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />

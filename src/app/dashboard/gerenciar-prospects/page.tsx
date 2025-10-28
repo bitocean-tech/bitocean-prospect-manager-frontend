@@ -4,10 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Users } from "lucide-react";
-import {
-  GerenciarProspectsProvider,
-  useGerenciarProspects,
-} from "@/contexts/GerenciarProspectsContext";
+import { useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
 import { ProspectsFilters } from "@/components/gerenciar-prospects/ProspectsFilters";
 import { ProspectsTable } from "@/components/gerenciar-prospects/ProspectsTable";
 import { ProspectsPagination } from "@/components/gerenciar-prospects/ProspectsPagination";
@@ -120,9 +117,5 @@ function GerenciarProspectsContent() {
 }
 
 export default function GerenciarProspectsPage() {
-  return (
-    <GerenciarProspectsProvider>
-      <GerenciarProspectsContent />
-    </GerenciarProspectsProvider>
-  );
+  return <GerenciarProspectsContent />;
 }
