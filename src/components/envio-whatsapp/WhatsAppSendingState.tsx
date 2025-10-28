@@ -27,14 +27,24 @@ interface WhatsAppSendingStateProps {
   isWaiting: boolean;
   isSending: boolean;
   currentStep: string;
+  currentContactIndex?: number;
 }
 
+// Mapeamento de ícones declarado fora de render para seleção estável
+const ICONS = {
+  messageCircle: MessageCircle,
+  user: User,
+  send: Send,
+  clock: Clock,
+  checkCircle: CheckCircle,
+};
+
 const sendingMessages = [
-  { text: "Preparando envio...", icon: MessageCircle },
-  { text: "Formatando números...", icon: User },
-  { text: "Enviando mensagem...", icon: Send },
-  { text: "Aguardando intervalo...", icon: Clock },
-  { text: "Processando próximo contato...", icon: CheckCircle },
+  { text: "Preparando envio...", key: "messageCircle" as const },
+  { text: "Formatando números...", key: "user" as const },
+  { text: "Enviando mensagem...", key: "send" as const },
+  { text: "Aguardando intervalo...", key: "clock" as const },
+  { text: "Processando próximo contato...", key: "checkCircle" as const },
 ];
 
 export function WhatsAppSendingState({
@@ -47,6 +57,7 @@ export function WhatsAppSendingState({
   isWaiting,
   isSending,
   currentStep,
+  currentContactIndex,
 }: WhatsAppSendingStateProps) {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [countdown, setCountdown] = useState(0);
@@ -63,7 +74,6 @@ export function WhatsAppSendingState({
   // Contador regressivo quando está aguardando
   useEffect(() => {
     if (isWaiting && intervalSeconds > 0) {
-      setCountdown(intervalSeconds);
       const countdownInterval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -86,15 +96,18 @@ export function WhatsAppSendingState({
       .padStart(2, "0")}`;
   };
 
-  const getCurrentIcon = () => {
-    if (isWaiting) return Clock;
-    if (isSending) return Send;
-    return sendingMessages[currentMessageIndex].icon;
-  };
+  // Seleção de ícone via mapeamento estável
+  const iconKey = isWaiting
+    ? "clock"
+    : isSending
+    ? "send"
+    : sendingMessages[currentMessageIndex].key;
+  const CurrentIcon = ICONS[iconKey];
 
   const getCurrentMessage = () => {
     if (isWaiting && currentContact) {
-      return `Aguardando ${countdown}s para enviar para ${currentContact.displayName}`;
+      const display = countdown > 0 ? countdown : intervalSeconds;
+      return `Aguardando ${display}s para enviar para ${currentContact.displayName}`;
     }
     if (isSending && currentContact) {
       return `Enviando mensagem para ${currentContact.displayName}`;
@@ -103,7 +116,7 @@ export function WhatsAppSendingState({
   };
 
   const progress = totalContacts > 0 ? ((successCount + failureCount) / totalContacts) * 100 : 0;
-  const CurrentIcon = getCurrentIcon();
+  // CurrentIcon já calculado acima
 
   return (
     <div className={`w-full mx-auto ${className}`}>
@@ -121,9 +134,9 @@ export function WhatsAppSendingState({
 
           {/* Contador regressivo ou progresso */}
           <div className="space-y-3">
-            {isWaiting && countdown > 0 ? (
+            {isWaiting && intervalSeconds > 0 ? (
               <div className="text-5xl font-mono font-bold text-green-600 dark:text-green-400 tracking-wider">
-                {formatTime(countdown)}
+                {formatTime(countdown > 0 ? countdown : intervalSeconds)}
               </div>
             ) : (
               <div className="text-5xl font-mono font-bold text-green-600 dark:text-green-400 tracking-wider">
@@ -201,7 +214,7 @@ export function WhatsAppSendingState({
                 Próximo contato:
               </p>
               <p className="font-semibold text-blue-800 dark:text-blue-200">
-                {currentContact.displayName} ({currentContact.index + 1}/{totalContacts})
+                {currentContact.displayName} ({((currentContactIndex ?? (successCount + failureCount)) + 1)}/{totalContacts})
               </p>
             </div>
           )}

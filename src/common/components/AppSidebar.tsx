@@ -1,8 +1,8 @@
 "use client";
 
-import { Search, Send } from "lucide-react";
+import { Search, Send, LogOut } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -12,8 +12,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { clearAccessKey } from "@/common/helpers/cookies";
+import { ROUTES } from "@/common/utils/constants";
 
 const menuItems = [
   {
@@ -30,6 +34,14 @@ const menuItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  function handleLogout() {
+    try {
+      clearAccessKey();
+    } catch (_) {}
+    router.push(ROUTES.login);
+  }
 
   return (
     <Sidebar>
@@ -66,6 +78,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t p-4">
+        <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
+          <LogOut className="h-4 w-4" />
+          <span>Logout</span>
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
