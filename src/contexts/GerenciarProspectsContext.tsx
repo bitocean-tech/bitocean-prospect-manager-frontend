@@ -8,7 +8,7 @@ interface GerenciarProspectsContextType {
   filters: ListPlacesQuery;
   setFilters: (filters: ListPlacesQuery) => void;
   clearFilters: () => void;
-  
+
   // Seleções múltiplas
   selectedItems: PlaceItem[];
   toggleSelection: (item: PlaceItem) => void;
@@ -17,7 +17,9 @@ interface GerenciarProspectsContextType {
   isSelected: (item: PlaceItem) => boolean;
 }
 
-const GerenciarProspectsContext = createContext<GerenciarProspectsContextType | undefined>(undefined);
+const GerenciarProspectsContext = createContext<
+  GerenciarProspectsContextType | undefined
+>(undefined);
 
 const defaultFilters: ListPlacesQuery = {
   page: 1,
@@ -28,7 +30,9 @@ interface GerenciarProspectsProviderProps {
   children: ReactNode;
 }
 
-export function GerenciarProspectsProvider({ children }: GerenciarProspectsProviderProps) {
+export function GerenciarProspectsProvider({
+  children,
+}: GerenciarProspectsProviderProps) {
   const [filters, setFilters] = useState<ListPlacesQuery>(defaultFilters);
   const [selectedItems, setSelectedItems] = useState<PlaceItem[]>([]);
 
@@ -37,10 +41,12 @@ export function GerenciarProspectsProvider({ children }: GerenciarProspectsProvi
   };
 
   const toggleSelection = (item: PlaceItem) => {
-    setSelectedItems(prev => {
-      const isCurrentlySelected = prev.some(selected => selected.id === item.id);
+    setSelectedItems((prev) => {
+      const isCurrentlySelected = prev.some(
+        (selected) => selected.id === item.id
+      );
       if (isCurrentlySelected) {
-        return prev.filter(selected => selected.id !== item.id);
+        return prev.filter((selected) => selected.id !== item.id);
       } else {
         return [...prev, item];
       }
@@ -49,9 +55,9 @@ export function GerenciarProspectsProvider({ children }: GerenciarProspectsProvi
 
   const selectAll = (items: PlaceItem[]) => {
     // Adiciona apenas os itens da página atual que não estão selecionados
-    setSelectedItems(prev => {
-      const currentIds = new Set(prev.map(item => item.id));
-      const newItems = items.filter(item => !currentIds.has(item.id));
+    setSelectedItems((prev) => {
+      const currentIds = new Set(prev.map((item) => item.id));
+      const newItems = items.filter((item) => !currentIds.has(item.id));
       return [...prev, ...newItems];
     });
   };
@@ -61,7 +67,7 @@ export function GerenciarProspectsProvider({ children }: GerenciarProspectsProvi
   };
 
   const isSelected = (item: PlaceItem) => {
-    return selectedItems.some(selected => selected.id === item.id);
+    return selectedItems.some((selected) => selected.id === item.id);
   };
 
   const value: GerenciarProspectsContextType = {
@@ -85,7 +91,9 @@ export function GerenciarProspectsProvider({ children }: GerenciarProspectsProvi
 export function useGerenciarProspects() {
   const context = useContext(GerenciarProspectsContext);
   if (context === undefined) {
-    throw new Error("useGerenciarProspects must be used within a GerenciarProspectsProvider");
+    throw new Error(
+      "useGerenciarProspects must be used within a GerenciarProspectsProvider"
+    );
   }
   return context;
 }
