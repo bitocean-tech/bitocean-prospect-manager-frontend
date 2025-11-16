@@ -5,9 +5,9 @@ export interface ListPlacesQuery {
   pageSize?: number;
   state?: string;
   city?: string;
-  hasWebsite?: 'true' | 'false';
+  hasWebsite?: "true" | "false";
   nicheSearched?: string;
-  firstMessageSent?: 'true' | 'false';
+  firstMessageSent?: "true" | "false";
   googlePrimaryCategoryLike?: string;
 }
 
@@ -24,7 +24,7 @@ export interface PlaceItem {
   state?: string | null;
   firstMessageSent: boolean;
   firstMessageSentAt?: string | null;
-  enrichmentStatus: 'pending' | 'enriched' | 'failed';
+  enrichmentStatus: "pending" | "enriched" | "failed";
   enrichedAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -42,9 +42,40 @@ export interface SelectedProspects {
   selectedItems: PlaceItem[];
 }
 
+export interface SendIntervalOption {
+  name: string;
+  min: number;
+  max: number;
+}
+
 export interface Template {
   id: string;
   title: string;
   content: string;
   tag: string;
+}
+
+// V2 - Campanhas / Tipos de Mensagem e Templates por Tipo
+export interface MessageType {
+  id: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+  templateCount: number;
+}
+
+export interface MessageTemplate {
+  id: string;
+  title: string;
+  content: string;
+  messageTypeId: string;
+  isActive: boolean;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+  messageType: {
+    id: string;
+    name: string;
+  };
 }
