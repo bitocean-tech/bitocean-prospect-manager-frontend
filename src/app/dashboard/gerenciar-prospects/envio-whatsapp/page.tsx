@@ -37,31 +37,54 @@ import { isValidPhoneNumber } from "@/utils/phone";
 export default function EnvioWhatsappPage() {
   const router = useRouter();
   const { selectedItems } = useGerenciarProspects();
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
-  const [sendInterval, setSendInterval] = useState<string>("");
+  const [selectedMessageTypeId, setSelectedMessageTypeId] =
+    useState<string>("");
+  const [sendIntervalKey, setSendIntervalKey] = useState<string>("");
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
 
-  // Buscar templates usando React Query
+  // Message Types
   const {
-    data: templates = [],
-    isLoading: isLoadingTemplates,
-    error: templatesError,
+    data: messageTypes = [],
+    isLoading: isLoadingMessageTypes,
+    error: messageTypesError,
   } = useQuery({
-    queryKey: ["templates"],
-    queryFn: GerenciarProspectsService.getTemplates,
+    queryKey: ["messageTypes"],
+    queryFn: GerenciarProspectsService.getMessageTypes,
+  });
+
+  // Templates por tipo (preview)
+  const {
+    data: templatesByType = [],
+    isFetching: isFetchingTemplatesByType,
+    error: templatesByTypeError,
+  } = useQuery({
+    queryKey: ["templatesByType", selectedMessageTypeId],
+    queryFn: () =>
+      selectedMessageTypeId
+        ? GerenciarProspectsService.getTemplatesByMessageType(
+            selectedMessageTypeId
+          )
+        : Promise.resolve([]),
+    enabled: !!selectedMessageTypeId,
+  });
+
+  // Opções de intervalo (range min/max)
+  const { data: intervalOptions = [] } = useQuery({
+    queryKey: ["sendIntervalOptions"],
+    queryFn: GerenciarProspectsService.getSendIntervalOptions,
   });
 
   const handleGoBack = () => {
     router.push("/dashboard/gerenciar-prospects");
   };
 
-  const handleTemplateChange = (templateId: string) => {
-    setSelectedTemplate(templateId);
+  const handleMessageTypeChange = (messageTypeId: string) => {
+    setSelectedMessageTypeId(messageTypeId);
   };
 
   // Função para lidar com o envio de mensagens
   const handleSendMessages = () => {
-    if (!sendInterval) return;
+    if (!sendIntervalKey) return;
 
     const contactsWithPhone = selectedItems.filter(
       (item) => item.normalizedPhoneE164 || item.nationalPhoneNumber
@@ -81,8 +104,8 @@ export default function EnvioWhatsappPage() {
     // (futuro: criar campanha e redirecionar para tela de acompanhamento)
     console.log({
       selectedItems,
-      selectedTemplate,
-      sendInterval,
+      selectedMessageTypeId,
+      sendIntervalKey,
     });
   };
 
@@ -244,27 +267,27 @@ export default function EnvioWhatsappPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="template-select">Template de Mensagem</Label>
-                {templatesError && (
+                <Label htmlFor="message-type-select">Tipo de Mensagem</Label>
+                {messageTypesError && (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Erro ao carregar templates. Tente novamente.
+                      Erro ao carregar tipos. Tente novamente.
                     </AlertDescription>
                   </Alert>
                 )}
                 <Select
-                  value={selectedTemplate}
-                  onValueChange={handleTemplateChange}
-                  disabled={isLoadingTemplates}
+                  value={selectedMessageTypeId}
+                  onValueChange={handleMessageTypeChange}
+                  disabled={isLoadingMessageTypes}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um modelo" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.title}
+                    {messageTypes.map((mt) => (
+                      <SelectItem key={mt.id} value={mt.id}>
+                        {mt.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -273,14 +296,19 @@ export default function EnvioWhatsappPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="send-interval">Intervalo entre envios</Label>
-                <Select value={sendInterval} onValueChange={setSendInterval}>
-                  <SelectTrigger>
+                <Select
+                  value={sendIntervalKey}
+                  onValueChange={setSendIntervalKey}
+                >
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione o intervalo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="4">4 segundos</SelectItem>
-                    <SelectItem value="8">8 segundos</SelectItem>
-                    <SelectItem value="10">10 segundos</SelectItem>
+                    {intervalOptions.map((opt, idx) => (
+                      <SelectItem key={idx} value={`${opt.min}-${opt.max}`}>
+                        {opt.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -288,7 +316,7 @@ export default function EnvioWhatsappPage() {
 
             <Button
               onClick={handleSendMessages}
-              disabled={!sendInterval || selectedItems.length === 0}
+              disabled={!sendIntervalKey || selectedItems.length === 0}
               className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
               <MessageCircle className="mr-2 h-4 w-4" />
@@ -296,6 +324,41 @@ export default function EnvioWhatsappPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Lista de templates (preview somente leitura) */}
+        {selectedMessageTypeId && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Variações de Mensagem</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {templatesByTypeError && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Erro ao carregar variações de mensagem.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {!isFetchingTemplatesByType && templatesByType.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma variação encontrada para este tipo.
+                </p>
+              )}
+              {templatesByType.map((tpl) => (
+                <div
+                  key={tpl.id}
+                  className="p-3 border rounded-md bg-muted/30 space-y-1"
+                >
+                  <div className="text-sm font-medium">{tpl.title}</div>
+                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {tpl.content}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
       </>
 
       {/* Modal de Confirmação */}
@@ -361,17 +424,24 @@ export default function EnvioWhatsappPage() {
                       Intervalo:
                     </span>
                     <span className="font-medium text-blue-800 dark:text-blue-200">
-                      {sendInterval} segundos
+                      {
+                        intervalOptions.find(
+                          (o) => `${o.min}-${o.max}` === sendIntervalKey
+                        )?.name
+                      }
                     </span>
                   </div>
-                  {selectedTemplate && (
+                  {selectedMessageTypeId && (
                     <div className="flex justify-between text-sm">
                       <span className="text-blue-700 dark:text-blue-300">
-                        Template:
+                        Tipo:
                       </span>
                       <span className="font-medium text-blue-800 dark:text-blue-200">
-                        {templates.find((t) => t.id === selectedTemplate)
-                          ?.title || "Personalizado"}
+                        {
+                          messageTypes.find(
+                            (t) => t.id === selectedMessageTypeId
+                          )?.name
+                        }
                       </span>
                     </div>
                   )}
