@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { GerenciarProspectsService } from "@/services/gerenciar-prospects";
 import type { CampaignStatus } from "@/types/gerenciar-prospects";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,

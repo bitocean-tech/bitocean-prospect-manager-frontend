@@ -11,6 +11,7 @@ import type {
   ListCampaignsResponse,
   Campaign,
 } from "@/types/gerenciar-prospects";
+import { admPhoneNumbers } from "@/common/constants/admPhoneNumbers";
 
 /**
  * Serviço para operações da funcionalidade Gerenciar Prospects
@@ -142,6 +143,7 @@ export class GerenciarProspectsService {
         intervalMin,
         intervalMax,
         name,
+        notifyPhones: admPhoneNumbers,
       }
     );
     return response.data;
