@@ -175,7 +175,7 @@ export default function CampanhasPage() {
                   }
                 }}
               >
-                <CardContent className="p-4">
+                <CardContent className="px-4">
                   <Badge
                     className={`absolute top-3 right-3 ${statusClass}`}
                     variant="outline"
