@@ -115,3 +115,41 @@ export interface ListCampaignsResponse {
   total: number;
   totalPages: number;
 }
+
+// Campaign recipients
+export type CampaignRecipientStatus = "pending" | "sent" | "failed";
+
+export interface CampaignRecipient {
+  id: string;
+  status: CampaignRecipientStatus;
+  sentAt: string | null;
+  errorMessage?: string | null;
+  templateId?: string | null;
+  place: {
+    id: string;
+    googlePlaceId: string;
+    displayName: string;
+    normalizedPhoneE164?: string | null;
+    city?: string | null;
+    state?: string | null;
+    nicheSearched?: string | null;
+  };
+  template?: {
+    id: string;
+    title: string;
+  } | null;
+}
+
+export interface ListCampaignRecipientsQuery {
+  page?: number;
+  pageSize?: number;
+  status?: CampaignRecipientStatus;
+}
+
+export interface ListCampaignRecipientsResponse {
+  items: CampaignRecipient[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}

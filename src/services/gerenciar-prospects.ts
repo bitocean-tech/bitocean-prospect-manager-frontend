@@ -10,6 +10,8 @@ import type {
   ListCampaignsQuery,
   ListCampaignsResponse,
   Campaign,
+  ListCampaignRecipientsQuery,
+  ListCampaignRecipientsResponse,
 } from "@/types/gerenciar-prospects";
 import { admPhoneNumbers } from "@/common/constants/admPhoneNumbers";
 
@@ -106,6 +108,20 @@ export class GerenciarProspectsService {
    */
   static async getCampaignById(id: string): Promise<Campaign> {
     const response = await apiClient.get<Campaign>(`/campaigns/${id}`);
+    return response.data;
+  }
+
+  /**
+   * Lista recipients de uma campanha
+   */
+  static async getCampaignRecipients(
+    campaignId: string,
+    query: ListCampaignRecipientsQuery
+  ): Promise<ListCampaignRecipientsResponse> {
+    const response = await apiClient.get<ListCampaignRecipientsResponse>(
+      `/campaigns/${campaignId}/recipients`,
+      { params: query }
+    );
     return response.data;
   }
 
