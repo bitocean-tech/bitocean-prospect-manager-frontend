@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Send, LogOut } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -29,6 +30,11 @@ const menuItems = [
     title: "Gerenciar Prospects",
     url: "/dashboard/gerenciar-prospects",
     icon: Send,
+  },
+  {
+    title: "Campanhas",
+    url: "/dashboard/campanhas",
+    icon: ListChecks,
   },
 ];
 

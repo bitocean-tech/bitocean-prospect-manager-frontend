@@ -79,3 +79,39 @@ export interface CampaignCreateResponse {
   totalRecipients: number;
   message: string;
 }
+
+// Campaigns - listagem e tipos
+export type CampaignStatus = "pending" | "in_progress" | "completed" | "failed";
+
+export interface Campaign {
+  id: string;
+  name: string;
+  messageTypeId: string;
+  messageType: { id: string; name: string };
+  status: CampaignStatus;
+  intervalMin: number;
+  intervalMax: number;
+  totalRecipients: number;
+  successCount: number;
+  failedCount: number;
+  pendingCount: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListCampaignsQuery {
+  page?: number;
+  pageSize?: number;
+  status?: CampaignStatus;
+  search?: string;
+}
+
+export interface ListCampaignsResponse {
+  items: Campaign[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}

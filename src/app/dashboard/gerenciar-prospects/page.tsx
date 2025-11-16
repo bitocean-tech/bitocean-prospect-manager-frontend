@@ -10,17 +10,16 @@ import { ProspectsTable } from "@/components/gerenciar-prospects/ProspectsTable"
 import { ProspectsPagination } from "@/components/gerenciar-prospects/ProspectsPagination";
 import { SelectedProspectsBar } from "@/components/gerenciar-prospects/SelectedProspectsBar";
 import { GerenciarProspectsService } from "@/services/gerenciar-prospects";
+import { PlaceItem } from "@/types/gerenciar-prospects";
 
 function GerenciarProspectsContent() {
-  const { filters, setFilters, selectAll, clearSelection } =
-    useGerenciarProspects();
+  const { filters, setFilters, selectAll } = useGerenciarProspects();
 
   // Query para buscar prospects
   const {
     data: placesData,
     isLoading: isLoadingPlaces,
     error: placesError,
-    refetch: refetchPlaces,
   } = useQuery({
     queryKey: ["places", filters],
     queryFn: () => GerenciarProspectsService.getPlaces(filters),
@@ -35,7 +34,7 @@ function GerenciarProspectsContent() {
     setFilters({ ...filters, pageSize, page: 1 });
   };
 
-  const handleSelectAll = (items: any[]) => {
+  const handleSelectAll = (items: PlaceItem[]) => {
     selectAll(items);
   };
 

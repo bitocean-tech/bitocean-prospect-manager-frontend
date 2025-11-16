@@ -117,6 +117,9 @@ export default function EnvioWhatsappPage() {
       })
         .then((resp) => {
           console.log(resp);
+          if (resp?.campaignId) {
+            router.push(`/dashboard/campanhas/${resp.campaignId}`);
+          }
         })
         .catch((err) => {
           console.error(err);

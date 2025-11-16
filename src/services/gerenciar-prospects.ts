@@ -7,6 +7,9 @@ import type {
   MessageTemplate,
   SendIntervalOption,
   CampaignCreateResponse,
+  ListCampaignsQuery,
+  ListCampaignsResponse,
+  Campaign,
 } from "@/types/gerenciar-prospects";
 
 /**
@@ -83,6 +86,26 @@ export class GerenciarProspectsService {
         max: 10 * 60,
       },
     ] as SendIntervalOption[];
+  }
+
+  /**
+   * Lista campanhas com filtros e paginação
+   */
+  static async getCampaigns(
+    query: ListCampaignsQuery
+  ): Promise<ListCampaignsResponse> {
+    const response = await apiClient.get<ListCampaignsResponse>("/campaigns", {
+      params: query,
+    });
+    return response.data;
+  }
+
+  /**
+   * Busca detalhes de uma campanha por id
+   */
+  static async getCampaignById(id: string): Promise<Campaign> {
+    const response = await apiClient.get<Campaign>(`/campaigns/${id}`);
+    return response.data;
   }
 
   /**

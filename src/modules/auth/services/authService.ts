@@ -22,13 +22,10 @@ export class AuthService {
         valid: response.status === 200,
         message: "Chave válida",
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         valid: false,
-        message:
-          error.response?.status === 401
-            ? "Chave inválida ou não autorizada"
-            : "Erro ao validar chave de acesso",
+        message: error instanceof Error ? error.message : "Erro desconhecido",
       };
     }
   }
