@@ -132,12 +132,9 @@ export default function CampanhasPage() {
         {isLoading &&
           Array.from({ length: pageSize }).map((_, i) => (
             <Card key={`sk-${i}`}>
-              <CardHeader>
-                <CardTitle className="h-6 w-48 bg-muted rounded animate-pulse" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="h-4 w-32 bg-muted rounded animate-pulse" />
-                <div className="h-4 w-40 bg-muted rounded animate-pulse" />
+              <CardContent>
+                <div></div>
+                <div className="h-5 w-48 mb-2 bg-muted rounded animate-pulse"></div>
                 <div className="h-4 w-24 bg-muted rounded animate-pulse" />
               </CardContent>
             </Card>
