@@ -48,13 +48,6 @@ export interface SendIntervalOption {
   max: number;
 }
 
-export interface Template {
-  id: string;
-  title: string;
-  content: string;
-  tag: string;
-}
-
 // V2 - Campanhas / Tipos de Mensagem e Templates por Tipo
 export interface MessageType {
   id: string;
@@ -78,4 +71,11 @@ export interface MessageTemplate {
     id: string;
     name: string;
   };
+}
+
+export interface CampaignCreateResponse {
+  campaignId: string;
+  status: "pending" | "in_progress" | "completed" | "failed";
+  totalRecipients: number;
+  message: string;
 }

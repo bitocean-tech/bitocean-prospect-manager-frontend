@@ -3,10 +3,10 @@ import type { Niche } from "@/common/interfaces";
 import type {
   ListPlacesQuery,
   ListPlacesResponse,
-  Template,
   MessageType,
   MessageTemplate,
   SendIntervalOption,
+  CampaignCreateResponse,
 } from "@/types/gerenciar-prospects";
 
 /**
@@ -33,14 +33,6 @@ export class GerenciarProspectsService {
   }
 
   /**
-   * Busca lista de templates disponíveis
-   */
-  static async getTemplates(): Promise<Template[]> {
-    const response = await apiClient.get<Template[]>("/templates");
-    return response.data;
-  }
-
-  /**
    * Lista tipos de mensagem (Message Types) para campanhas
    */
   static async getMessageTypes(): Promise<MessageType[]> {
@@ -57,22 +49,6 @@ export class GerenciarProspectsService {
     const response = await apiClient.get<MessageTemplate[]>("/templates", {
       params: { messageTypeId },
     });
-    return response.data;
-  }
-
-  /**
-   * Envia mensagem WhatsApp para um contato
-   */
-  static async sendWhatsappMessage(payload: {
-    text: string;
-    number: string;
-    googlePlaceId?: string;
-  }): Promise<{ success: boolean; message?: string; error?: string }> {
-    const response = await apiClient.post<{
-      success: boolean;
-      message?: string;
-      error?: string;
-    }>("/whatsapp/sendWhatsappMessage", payload);
     return response.data;
   }
 
@@ -107,5 +83,44 @@ export class GerenciarProspectsService {
         max: 10 * 60,
       },
     ] as SendIntervalOption[];
+  }
+
+  /**
+   * Cria uma campanha de envio em massa
+   */
+  static async createCampaign(params: {
+    placeIds: string[];
+    messageTypeId: string;
+    intervalMin: number;
+    intervalMax: number;
+    messageTypeName: string;
+  }): Promise<CampaignCreateResponse> {
+    const {
+      placeIds,
+      messageTypeId,
+      intervalMin,
+      intervalMax,
+      messageTypeName,
+    } = params;
+
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, "0");
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const yyyy = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const min = String(now.getMinutes()).padStart(2, "0");
+    const name = `${messageTypeName} - ${dd}/${mm}/${yyyy} ${hh}:${min}`;
+
+    const response = await apiClient.post<CampaignCreateResponse>(
+      "/campaigns",
+      {
+        placeIds,
+        messageTypeId,
+        intervalMin,
+        intervalMax,
+        name,
+      }
+    );
+    return response.data;
   }
 }

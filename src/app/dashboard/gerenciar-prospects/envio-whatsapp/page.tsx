@@ -100,13 +100,30 @@ export default function EnvioWhatsappPage() {
 
   const handleConfirmSend = () => {
     setIsConfirmModalOpen(false);
-    // Por enquanto apenas loga os dados selecionados
-    // (futuro: criar campanha e redirecionar para tela de acompanhamento)
-    console.log({
-      selectedItems,
-      selectedMessageTypeId,
-      sendIntervalKey,
-    });
+    // Criar campanha e logar resposta (sem redirecionar por enquanto)
+    try {
+      const [minStr, maxStr] = sendIntervalKey.split("-");
+      const intervalMin = parseInt(minStr, 10);
+      const intervalMax = parseInt(maxStr, 10);
+      const placeIds = selectedItems.map((i) => i.id);
+      const messageTypeName =
+        messageTypes.find((t) => t.id === selectedMessageTypeId)?.name || "";
+      GerenciarProspectsService.createCampaign({
+        placeIds,
+        messageTypeId: selectedMessageTypeId,
+        intervalMin,
+        intervalMax,
+        messageTypeName,
+      })
+        .then((resp) => {
+          console.log(resp);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Validação de telefone utilizando utilitário compartilhado
@@ -316,7 +333,11 @@ export default function EnvioWhatsappPage() {
 
             <Button
               onClick={handleSendMessages}
-              disabled={!sendIntervalKey || selectedItems.length === 0}
+              disabled={
+                !sendIntervalKey ||
+                !selectedMessageTypeId ||
+                selectedItems.length === 0
+              }
               className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
               <MessageCircle className="mr-2 h-4 w-4" />
