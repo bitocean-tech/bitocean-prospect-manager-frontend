@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -9,8 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Phone, Users, XCircle } from "lucide-react";
+import { AlertCircle, Phone, Users, XCircle, Loader2 } from "lucide-react";
 import { PlaceItem } from "@/types/gerenciar-prospects";
+import { GerenciarProspectsService } from "@/services/gerenciar-prospects";
 
 interface CreateExternalCampaignModalProps {
   open: boolean;
@@ -25,6 +27,10 @@ export function CreateExternalCampaignModal({
   selectedItems,
   onConfirm,
 }: CreateExternalCampaignModalProps) {
+  const router = useRouter();
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   // Calcular estatísticas
   const stats = useMemo(() => {
     const contactsWithPhone = selectedItems.filter(
@@ -41,13 +47,45 @@ export function CreateExternalCampaignModal({
     };
   }, [selectedItems]);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (stats.withPhone === 0) return;
-    
-    if (onConfirm) {
-      onConfirm();
+
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      const placeIds = selectedItems
+        .filter(
+          (item) => item.normalizedPhoneE164 || item.nationalPhoneNumber
+        )
+        .map((item) => item.id);
+
+      const response = await GerenciarProspectsService.createExternalCampaign({
+        placeIds,
+      });
+
+      if (response?.campaignId) {
+        // Chamar callback se fornecido
+        if (onConfirm) {
+          onConfirm();
+        }
+        
+        // Fechar modal e redirecionar
+        onOpenChange(false);
+        router.push(`/dashboard/campanhas/${response.campaignId}`);
+      } else {
+        setError("Erro ao criar campanha: resposta inválida");
+      }
+    } catch (err) {
+      console.error("Erro ao criar campanha externa:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro ao criar campanha. Tente novamente."
+      );
+    } finally {
+      setIsCreating(false);
     }
-    onOpenChange(false);
   };
 
   return (
@@ -130,22 +168,43 @@ export function CreateExternalCampaignModal({
             </AlertDescription>
           </Alert>
 
+          {/* Mensagem de Erro */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Botões de Ação */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                setError(null);
+                onOpenChange(false);
+              }}
               className="flex-1"
+              disabled={isCreating}
             >
               Cancelar
             </Button>
             <Button
               onClick={handleConfirm}
               className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white"
-              disabled={stats.withPhone === 0}
+              disabled={stats.withPhone === 0 || isCreating}
             >
-              <Users className="mr-2 h-4 w-4" />
-              Confirmar Criação
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                <>
+                  <Users className="mr-2 h-4 w-4" />
+                  Confirmar Criação
+                </>
+              )}
             </Button>
           </div>
 

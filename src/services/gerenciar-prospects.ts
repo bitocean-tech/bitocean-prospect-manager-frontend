@@ -164,4 +164,36 @@ export class GerenciarProspectsService {
     );
     return response.data;
   }
+
+  /**
+   * Cria uma campanha externa (apenas armazena contatos para envio por outras plataformas)
+   */
+  static async createExternalCampaign(params: {
+    placeIds: string[];
+    name?: string;
+  }): Promise<CampaignCreateResponse> {
+    const { placeIds, name } = params;
+
+    // Gerar nome padrão se não fornecido
+    let campaignName = name;
+    if (!campaignName) {
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, "0");
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const yyyy = now.getFullYear();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const min = String(now.getMinutes()).padStart(2, "0");
+      campaignName = `Campanha Externa - ${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    }
+
+    const response = await apiClient.post<CampaignCreateResponse>(
+      "/campaigns",
+      {
+        placeIds,
+        name: campaignName,
+        isExternal: true,
+      }
+    );
+    return response.data;
+  }
 }
