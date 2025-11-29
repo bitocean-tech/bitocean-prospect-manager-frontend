@@ -155,3 +155,15 @@ export interface ListCampaignRecipientsResponse {
   total: number;
   totalPages: number;
 }
+
+export interface UpdateRecipientsDto {
+  recipientIds?: string[];
+  excludeRecipientIds?: string[];
+  status?: CampaignRecipientStatus;
+  errorMessage?: string;
+}
+
+export interface UpdateRecipientsResponse {
+  updatedCount: number;
+  message: string;
+}

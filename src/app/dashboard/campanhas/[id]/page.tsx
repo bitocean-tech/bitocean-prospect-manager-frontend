@@ -1,16 +1,26 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { GerenciarProspectsService } from "@/services/gerenciar-prospects";
-import type { Campaign } from "@/types/gerenciar-prospects";
+import type {
+  Campaign,
+  CampaignRecipientStatus,
+} from "@/types/gerenciar-prospects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Clock, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  Clock,
+  Loader2,
+  Users,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,10 +28,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
+
+const STATUS_FILTER_OPTIONS: Array<{
+  label: string;
+  value: CampaignRecipientStatus | "all";
+}> = [
+  { label: "Todos", value: "all" },
+  { label: "Pendentes", value: "pending" },
+  { label: "Enviados", value: "sent" },
+  { label: "Falhas", value: "failed" },
+];
 
 export default function CampanhaDetalhesPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id || "";
+  const queryClient = useQueryClient();
+
+  const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(
+    new Set()
+  );
+  const [recStatusFilter, setRecStatusFilter] = useState<
+    CampaignRecipientStatus | "all"
+  >("all");
+  const [recPage, setRecPage] = useState<number>(1);
+  const [recPageSize, setRecPageSize] = useState<number>(10);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["campaign", id],
@@ -30,27 +69,56 @@ export default function CampanhaDetalhesPage() {
     refetchInterval: (query) => {
       const c = query.state.data as Campaign | undefined;
       if (!c) return false;
-      return c.status === "in_progress" ? 3000 : false;
+      // Não fazer polling para campanhas externas
+      return c.status === "in_progress" && !c.isExternal ? 3000 : false;
     },
   });
 
-  // Recipients with pagination and polling aligned to campaign status
-  const [recPage, setRecPage] = useState<number>(1);
-  const [recPageSize, setRecPageSize] = useState<number>(10);
   const {
     data: recipientsData,
     isLoading: isLoadingRecipients,
     error: recipientsError,
     refetch: refetchRecipients,
   } = useQuery({
-    queryKey: ["campaignRecipients", id, recPage, recPageSize],
+    queryKey: ["campaignRecipients", id, recPage, recPageSize, recStatusFilter],
     queryFn: () =>
       GerenciarProspectsService.getCampaignRecipients(id, {
         page: recPage,
         pageSize: recPageSize,
+        status: recStatusFilter === "all" ? undefined : recStatusFilter,
       }),
     enabled: !!id,
-    refetchInterval: data?.status === "in_progress" ? 3000 : false,
+    refetchInterval:
+      data?.status === "in_progress" && !data?.isExternal ? 3000 : false,
+  });
+
+  // Mutation para atualizar recipients
+  const updateRecipientsMutation = useMutation({
+    mutationFn: (params: {
+      recipientIds?: string[];
+      status: CampaignRecipientStatus;
+      errorMessage?: string;
+    }) => {
+      // Sempre enviar errorMessage como string vazia quando não for erro
+      const updateParams = {
+        ...params,
+        errorMessage:
+          params.status === "failed"
+            ? params.errorMessage || "Marcado manualmente como falha"
+            : "",
+      };
+      return GerenciarProspectsService.updateRecipients(id, updateParams);
+    },
+    onSuccess: () => {
+      // Refetch campaign e recipients
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaignRecipients", id] });
+      setSelectedRecipients(new Set());
+      toast.success("Status dos destinatários atualizado com sucesso.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao atualizar destinatários.");
+    },
   });
 
   // Force a final refresh after campaign leaves in_progress
@@ -60,6 +128,11 @@ export default function CampanhaDetalhesPage() {
       refetchRecipients();
     }
   }, [id, data?.status, refetchRecipients]);
+
+  // Reset selection when filter changes
+  useEffect(() => {
+    setSelectedRecipients(new Set());
+  }, [recStatusFilter, recPage]);
 
   function formatDateTime(value?: string | null): string {
     if (!value) return "-";
@@ -85,6 +158,79 @@ export default function CampanhaDetalhesPage() {
       ? "Falhou"
       : "Pendente";
 
+  const isExternal = data?.isExternal ?? false;
+
+  // Seleção de recipients
+  const currentPageRecipients = recipientsData?.items || [];
+  const allCurrentPageSelected =
+    currentPageRecipients.length > 0 &&
+    currentPageRecipients.every((r) => selectedRecipients.has(r.id));
+  const someCurrentPageSelected = currentPageRecipients.some((r) =>
+    selectedRecipients.has(r.id)
+  );
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const newSelection = new Set(selectedRecipients);
+      currentPageRecipients.forEach((r) => newSelection.add(r.id));
+      setSelectedRecipients(newSelection);
+    } else {
+      const newSelection = new Set(selectedRecipients);
+      currentPageRecipients.forEach((r) => newSelection.delete(r.id));
+      setSelectedRecipients(newSelection);
+    }
+  };
+
+  const handleToggleRecipient = (recipientId: string) => {
+    const newSelection = new Set(selectedRecipients);
+    if (newSelection.has(recipientId)) {
+      newSelection.delete(recipientId);
+    } else {
+      newSelection.add(recipientId);
+    }
+    setSelectedRecipients(newSelection);
+  };
+
+  const handleMarkAllAsSent = () => {
+    updateRecipientsMutation.mutate({
+      status: "sent",
+    });
+  };
+
+  const handleMarkSelectedAsSent = () => {
+    if (selectedRecipients.size === 0) {
+      toast.error("Selecione pelo menos um destinatário.");
+      return;
+    }
+
+    updateRecipientsMutation.mutate({
+      recipientIds: Array.from(selectedRecipients),
+      status: "sent",
+    });
+  };
+
+  const handleMarkAllAsFailed = () => {
+    updateRecipientsMutation.mutate({
+      status: "failed",
+      errorMessage: "Marcado manualmente como falha",
+    });
+  };
+
+  const handleMarkSelectedAsFailed = () => {
+    if (selectedRecipients.size === 0) {
+      toast.error("Selecione pelo menos um destinatário.");
+      return;
+    }
+
+    updateRecipientsMutation.mutate({
+      recipientIds: Array.from(selectedRecipients),
+      status: "failed",
+      errorMessage: "Marcado manualmente como falha",
+    });
+  };
+
+  const isUpdating = updateRecipientsMutation.isPending;
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -102,9 +248,20 @@ export default function CampanhaDetalhesPage() {
       <Card className="border relative">
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-3">
-            <CardTitle>
-              {data?.name || (isLoading ? "Carregando..." : "-")}
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle>
+                {data?.name || (isLoading ? "Carregando..." : "-")}
+              </CardTitle>
+              {isExternal && (
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
+                >
+                  <Users className="h-3 w-3 mr-1" />
+                  Externa
+                </Badge>
+              )}
+            </div>
             <Badge
               variant="outline"
               className={`shrink-0 ${
@@ -122,38 +279,70 @@ export default function CampanhaDetalhesPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pt-0">
-          {/* Intervalo e tipo */}
-          <div className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">
-              {data?.messageType?.name || "-"}
-            </span>{" "}
-            • Intervalo:{" "}
-            <span className="font-medium text-foreground">
-              {data?.intervalMin ?? "-"}s — {data?.intervalMax ?? "-"}s
-            </span>
-          </div>
+          {/* Intervalo e tipo - apenas para campanhas normais */}
+          {!isExternal && (
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {data?.messageType?.name || "-"}
+              </span>{" "}
+              • Intervalo:{" "}
+              <span className="font-medium text-foreground">
+                {data?.intervalMin ?? "-"}s — {data?.intervalMax ?? "-"}s
+              </span>
+            </div>
+          )}
+
+          {/* Informação para campanhas externas */}
+          {isExternal && (
+            <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30">
+              <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertDescription className="text-blue-800 dark:text-blue-200">
+                Esta é uma campanha externa. Os contatos foram armazenados para
+                envio por outras plataformas. Marque manualmente os contatos
+                como enviados após realizar o envio.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Datas e total */}
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
               <span>
-                Início:{" "}
+                Criada em:{" "}
                 <span className="font-medium text-foreground">
-                  {formatDateTime(data?.startedAt)}
+                  {formatDateTime(data?.createdAt)}
                 </span>
               </span>
             </div>
-            <span className="opacity-60">|</span>
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>
-                Fim:{" "}
-                <span className="font-medium text-foreground">
-                  {formatDateTime(data?.completedAt)}
-                </span>
-              </span>
-            </div>
+            {data?.startedAt && (
+              <>
+                <span className="opacity-60">|</span>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    Início:{" "}
+                    <span className="font-medium text-foreground">
+                      {formatDateTime(data?.startedAt)}
+                    </span>
+                  </span>
+                </div>
+              </>
+            )}
+            {data?.completedAt && (
+              <>
+                <span className="opacity-60">|</span>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    Fim:{" "}
+                    <span className="font-medium text-foreground">
+                      {formatDateTime(data?.completedAt)}
+                    </span>
+                  </span>
+                </div>
+              </>
+            )}
             <span className="opacity-60">|</span>
             <div className="flex items-center gap-1">
               <span>Total destinatários:</span>
@@ -192,7 +381,7 @@ export default function CampanhaDetalhesPage() {
           </div>
 
           {/* Indicador de progresso se em andamento */}
-          {data?.status === "in_progress" && (
+          {data?.status === "in_progress" && !isExternal && (
             <div className="mt-2 flex items-center gap-2 text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Envio em andamento... atualizando automaticamente</span>
@@ -203,12 +392,137 @@ export default function CampanhaDetalhesPage() {
 
       {/* Recipients */}
       <div className="mt-6">
-        <div className="mb-3">
-          <h2 className="text-xl font-semibold">Destinatários</h2>
-          <p className="text-sm text-muted-foreground">
-            Lista de contatos envolvidos na campanha.
-          </p>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Destinatários</h2>
+            <p className="text-sm text-muted-foreground">
+              {isExternal
+                ? "Lista de contatos. Marque como enviados após realizar o envio por outra plataforma."
+                : "Lista de contatos envolvidos na campanha."}
+            </p>
+          </div>
         </div>
+
+        {/* Filtros e ações para campanhas externas */}
+        {isExternal && (
+          <div className="mb-4 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/30 dark:bg-muted/10 p-4">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+              {/* Filtro e Seleção */}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-1">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Filtrar por status
+                  </Label>
+                  <Select
+                    value={recStatusFilter}
+                    onValueChange={(v: CampaignRecipientStatus | "all") => {
+                      setRecStatusFilter(v);
+                      setRecPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_FILTER_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-3 pt-6 sm:pt-0">
+                  {selectedRecipients.size > 0 ? (
+                    <Badge
+                      variant="outline"
+                      className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700"
+                    >
+                      {selectedRecipients.size} prospect
+                      {selectedRecipients.size !== 1 ? "s" : ""} selecionado
+                      {selectedRecipients.size !== 1 ? "s" : ""}
+                    </Badge>
+                  ) : (
+                    <span className="text-sm text-muted-foreground pt-6 sm:pt-0">
+                      Nenhum prospect selecionado
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div className="flex items-center gap-2 shrink-0">
+                {selectedRecipients.size > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedRecipients(new Set())}
+                    disabled={isUpdating}
+                  >
+                    Limpar Seleção
+                  </Button>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isUpdating}
+                      className="h-8"
+                    >
+                      Ações em Lote
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {selectedRecipients.size > 0 ? (
+                      <>
+                        <DropdownMenuItem
+                          onClick={handleMarkSelectedAsSent}
+                          disabled={isUpdating}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                          Marcar Selecionados como Enviados
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={handleMarkSelectedAsFailed}
+                          disabled={isUpdating}
+                        >
+                          <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                          Marcar Selecionados como Falha
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <>
+                        <DropdownMenuItem
+                          onClick={handleMarkAllAsSent}
+                          disabled={isUpdating}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                          Marcar Todos como Enviados
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={handleMarkAllAsFailed}
+                          disabled={isUpdating}
+                        >
+                          <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                          Marcar Todos como Falha
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {isUpdating && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Atualizando...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {recipientsError && (
           <Alert className="mb-4">
@@ -216,6 +530,33 @@ export default function CampanhaDetalhesPage() {
             <AlertDescription>Erro ao carregar destinatários.</AlertDescription>
           </Alert>
         )}
+
+        {/* Header com checkbox para selecionar todos (apenas para externas) */}
+        {isExternal &&
+          !isLoadingRecipients &&
+          currentPageRecipients.length > 0 && (
+            <div className="mb-3 p-3 rounded-md border bg-muted/30">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={allCurrentPageSelected}
+                  onCheckedChange={handleSelectAll}
+                />
+                <Label
+                  className="text-sm font-medium cursor-pointer"
+                  onClick={() => handleSelectAll(!allCurrentPageSelected)}
+                >
+                  Selecionar todos desta página ({currentPageRecipients.length}{" "}
+                  itens)
+                  {someCurrentPageSelected && !allCurrentPageSelected && (
+                    <span className="text-xs text-muted-foreground ml-1">
+                      ({selectedRecipients.size} selecionado
+                      {selectedRecipients.size !== 1 ? "s" : ""})
+                    </span>
+                  )}
+                </Label>
+              </div>
+            </div>
+          )}
 
         <div className="flex flex-col gap-3">
           {isLoadingRecipients &&
@@ -229,11 +570,27 @@ export default function CampanhaDetalhesPage() {
             ))}
 
           {!isLoadingRecipients &&
-            (recipientsData?.items || []).map((r) => (
-              <Card key={r.id} className="border">
-                <CardContent className="px-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+            currentPageRecipients.map((r) => (
+              <Card
+                key={r.id}
+                className={`border ${
+                  isExternal && selectedRecipients.has(r.id)
+                    ? "border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
+                    : ""
+                }`}
+              >
+                <CardContent className="px-6 py-4">
+                  <div className="flex items-start gap-3">
+                    {isExternal && (
+                      <div className="pt-1">
+                        <Checkbox
+                          checked={selectedRecipients.has(r.id)}
+                          onCheckedChange={() => handleToggleRecipient(r.id)}
+                          disabled={isUpdating}
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium truncate">
                           {r.place.displayName}
@@ -247,6 +604,11 @@ export default function CampanhaDetalhesPage() {
                       <div className="text-xs text-muted-foreground mt-1">
                         {r.place.normalizedPhoneE164 || "-"}
                       </div>
+                      {r.errorMessage && (
+                        <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          Erro: {r.errorMessage}
+                        </div>
+                      )}
                     </div>
                     <Badge
                       variant="outline"

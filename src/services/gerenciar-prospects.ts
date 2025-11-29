@@ -12,6 +12,8 @@ import type {
   Campaign,
   ListCampaignRecipientsQuery,
   ListCampaignRecipientsResponse,
+  UpdateRecipientsDto,
+  UpdateRecipientsResponse,
 } from "@/types/gerenciar-prospects";
 import { admPhoneNumbers } from "@/common/constants/admPhoneNumbers";
 
@@ -193,6 +195,20 @@ export class GerenciarProspectsService {
         name: campaignName,
         isExternal: true,
       }
+    );
+    return response.data;
+  }
+
+  /**
+   * Atualiza o status de recipients de uma campanha
+   */
+  static async updateRecipients(
+    campaignId: string,
+    params: UpdateRecipientsDto
+  ): Promise<UpdateRecipientsResponse> {
+    const response = await apiClient.patch<UpdateRecipientsResponse>(
+      `/campaigns/${campaignId}/recipients`,
+      params
     );
     return response.data;
   }
