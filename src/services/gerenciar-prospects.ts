@@ -14,6 +14,8 @@ import type {
   ListCampaignRecipientsResponse,
   UpdateRecipientsDto,
   UpdateRecipientsResponse,
+  GetCampaignPhonesDto,
+  GetCampaignPhonesResponse,
 } from "@/types/gerenciar-prospects";
 import { admPhoneNumbers } from "@/common/constants/admPhoneNumbers";
 
@@ -209,6 +211,20 @@ export class GerenciarProspectsService {
     const response = await apiClient.patch<UpdateRecipientsResponse>(
       `/campaigns/${campaignId}/recipients`,
       params
+    );
+    return response.data;
+  }
+
+  /**
+   * Obtém os telefones dos recipients de uma campanha
+   */
+  static async getCampaignPhones(
+    campaignId: string,
+    params?: GetCampaignPhonesDto
+  ): Promise<GetCampaignPhonesResponse> {
+    const response = await apiClient.post<GetCampaignPhonesResponse>(
+      `/campaigns/${campaignId}/phones`,
+      params || {}
     );
     return response.data;
   }

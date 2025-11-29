@@ -167,3 +167,12 @@ export interface UpdateRecipientsResponse {
   updatedCount: number;
   message: string;
 }
+
+export interface GetCampaignPhonesDto {
+  recipientIds?: string[];
+}
+
+export interface GetCampaignPhonesResponse {
+  phonesE164: string[];
+  phonesWithoutPlus: string[];
+}

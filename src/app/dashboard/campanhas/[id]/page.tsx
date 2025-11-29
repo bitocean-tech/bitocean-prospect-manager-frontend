@@ -18,6 +18,7 @@ import {
   Users,
   CheckCircle2,
   XCircle,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { ChevronDown } from "lucide-react";
+import { CopyPhonesModal } from "@/components/campanhas/CopyPhonesModal";
 
 const STATUS_FILTER_OPTIONS: Array<{
   label: string;
@@ -61,6 +63,7 @@ export default function CampanhaDetalhesPage() {
   >("all");
   const [recPage, setRecPage] = useState<number>(1);
   const [recPageSize, setRecPageSize] = useState<number>(10);
+  const [isCopyPhonesModalOpen, setIsCopyPhonesModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["campaign", id],
@@ -245,6 +248,10 @@ export default function CampanhaDetalhesPage() {
       recipientIds: Array.from(selectedRecipients),
       status: "pending",
     });
+  };
+
+  const handleCopyPhones = () => {
+    setIsCopyPhonesModalOpen(true);
   };
 
   const isUpdating = updateRecipientsMutation.isPending;
@@ -497,6 +504,13 @@ export default function CampanhaDetalhesPage() {
                     {selectedRecipients.size > 0 ? (
                       <>
                         <DropdownMenuItem
+                          onClick={handleCopyPhones}
+                          disabled={isUpdating}
+                        >
+                          <Phone className="h-4 w-4 mr-2 text-blue-600" />
+                          Copiar Telefones Selecionados
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={handleMarkSelectedAsSent}
                           disabled={isUpdating}
                         >
@@ -520,6 +534,13 @@ export default function CampanhaDetalhesPage() {
                       </>
                     ) : (
                       <>
+                        <DropdownMenuItem
+                          onClick={handleCopyPhones}
+                          disabled={isUpdating}
+                        >
+                          <Phone className="h-4 w-4 mr-2 text-blue-600" />
+                          Copiar Todos os Telefones
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={handleMarkAllAsSent}
                           disabled={isUpdating}
@@ -747,6 +768,18 @@ export default function CampanhaDetalhesPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Copiar Telefones */}
+      <CopyPhonesModal
+        open={isCopyPhonesModalOpen}
+        onOpenChange={setIsCopyPhonesModalOpen}
+        campaignId={id}
+        recipientIds={
+          selectedRecipients.size > 0
+            ? Array.from(selectedRecipients)
+            : undefined
+        }
+      />
     </div>
   );
 }
