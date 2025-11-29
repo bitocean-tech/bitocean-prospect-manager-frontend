@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, MessageSquare } from "lucide-react";
+import { ChevronDown, MessageSquare, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,10 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useGerenciarProspects } from "@/contexts/GerenciarProspectsContext";
 import { useRouter } from "next/navigation";
+import { CreateExternalCampaignModal } from "./CreateExternalCampaignModal";
 
 export function SelectedProspectsBar() {
   const { selectedItems } = useGerenciarProspects();
   const router = useRouter();
+  const [isExternalCampaignModalOpen, setIsExternalCampaignModalOpen] =
+    useState(false);
 
   return (
     <Card className="mb-6 py-4">
@@ -58,10 +62,25 @@ export function SelectedProspectsBar() {
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Envio de Mensagem
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsExternalCampaignModalOpen(true);
+                }}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Criar Campanha Externa
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </CardContent>
+
+      {/* Modal de Criação de Campanha Externa */}
+      <CreateExternalCampaignModal
+        open={isExternalCampaignModalOpen}
+        onOpenChange={setIsExternalCampaignModalOpen}
+        selectedItems={selectedItems}
+      />
     </Card>
   );
 }
