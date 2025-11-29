@@ -86,11 +86,12 @@ export type CampaignStatus = "pending" | "in_progress" | "completed" | "failed";
 export interface Campaign {
   id: string;
   name: string;
-  messageTypeId: string;
-  messageType: { id: string; name: string };
+  messageTypeId?: string;
+  messageType?: { id: string; name: string };
   status: CampaignStatus;
-  intervalMin: number;
-  intervalMax: number;
+  isExternal: boolean;
+  intervalMin?: number;
+  intervalMax?: number;
   totalRecipients: number;
   successCount: number;
   failedCount: number;
@@ -106,6 +107,7 @@ export interface ListCampaignsQuery {
   pageSize?: number;
   status?: CampaignStatus;
   search?: string;
+  isExternal?: boolean;
 }
 
 export interface ListCampaignsResponse {

@@ -26,6 +26,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Users,
 } from "lucide-react";
 
 const STATUS_OPTIONS: Array<{ label: string; value: CampaignStatus | "all" }> =
@@ -52,19 +53,35 @@ function formatDateTime(value?: string | null): string {
   }
 }
 
+const EXTERNAL_FILTER_OPTIONS: Array<{
+  label: string;
+  value: "all" | "true" | "false";
+}> = [
+  { label: "Todas", value: "all" },
+  { label: "Normais", value: "false" },
+  { label: "Externas", value: "true" },
+];
+
 export default function CampanhasPage() {
   const [status, setStatus] = useState<CampaignStatus | "all">("all");
+  const [isExternal, setIsExternal] = useState<"all" | "true" | "false">("all");
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const router = useRouter();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["campaigns", status, page, pageSize],
+    queryKey: ["campaigns", status, isExternal, page, pageSize],
     queryFn: () =>
       GerenciarProspectsService.getCampaigns({
         page,
         pageSize,
         status: status === "all" ? undefined : status,
+        isExternal:
+          isExternal === "all"
+            ? undefined
+            : isExternal === "true"
+            ? true
+            : false,
       }),
   });
 
@@ -77,7 +94,7 @@ export default function CampanhasPage() {
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="space-y-2">
           <Label>Status</Label>
           <Select
@@ -92,6 +109,27 @@ export default function CampanhasPage() {
             </SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Tipo de Campanha</Label>
+          <Select
+            value={isExternal}
+            onValueChange={(v: "all" | "true" | "false") => {
+              setIsExternal(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              {EXTERNAL_FILTER_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>
@@ -161,7 +199,11 @@ export default function CampanhasPage() {
             return (
               <Card
                 key={c.id}
-                className="border relative cursor-pointer transition-colors hover:bg-muted/40"
+                className={`border relative cursor-pointer transition-colors ${
+                  c.isExternal
+                    ? "border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-950/10 hover:bg-blue-50/50 dark:hover:bg-blue-950/20"
+                    : "border-l-4 border-l-green-500 bg-green-50/30 dark:bg-green-950/10 hover:bg-green-50/50 dark:hover:bg-green-950/20"
+                }`}
                 role="button"
                 tabIndex={0}
                 onClick={() => router.push(`/dashboard/campanhas/${c.id}`)}
@@ -173,14 +215,22 @@ export default function CampanhasPage() {
                 }}
               >
                 <CardContent className="px-4">
-                  <Badge
-                    className={`absolute top-3 right-3 ${statusClass}`}
-                    variant="outline"
-                  >
-                    {statusLabel}
-                  </Badge>
+                  <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
+                    <Badge className={statusClass} variant="outline">
+                      {statusLabel}
+                    </Badge>
+                    {c.isExternal && (
+                      <Badge
+                        className="bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
+                        variant="outline"
+                      >
+                        <Users className="h-3 w-3 mr-1" />
+                        Externa
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-start gap-3">
-                    <div className="min-w-0 w-full">
+                    <div className="min-w-0 w-full pr-20">
                       <h3 className="font-semibold truncate">{c.name}</h3>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
