@@ -229,6 +229,24 @@ export default function CampanhaDetalhesPage() {
     });
   };
 
+  const handleMarkAllAsPending = () => {
+    updateRecipientsMutation.mutate({
+      status: "pending",
+    });
+  };
+
+  const handleMarkSelectedAsPending = () => {
+    if (selectedRecipients.size === 0) {
+      toast.error("Selecione pelo menos um destinatário.");
+      return;
+    }
+
+    updateRecipientsMutation.mutate({
+      recipientIds: Array.from(selectedRecipients),
+      status: "pending",
+    });
+  };
+
   const isUpdating = updateRecipientsMutation.isPending;
 
   return (
@@ -486,6 +504,13 @@ export default function CampanhaDetalhesPage() {
                           Marcar Selecionados como Enviados
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          onClick={handleMarkSelectedAsPending}
+                          disabled={isUpdating}
+                        >
+                          <Clock className="h-4 w-4 mr-2 text-amber-600" />
+                          Marcar Selecionados como Pendentes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={handleMarkSelectedAsFailed}
                           disabled={isUpdating}
                         >
@@ -501,6 +526,13 @@ export default function CampanhaDetalhesPage() {
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
                           Marcar Todos como Enviados
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={handleMarkAllAsPending}
+                          disabled={isUpdating}
+                        >
+                          <Clock className="h-4 w-4 mr-2 text-amber-600" />
+                          Marcar Todos como Pendentes
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={handleMarkAllAsFailed}
