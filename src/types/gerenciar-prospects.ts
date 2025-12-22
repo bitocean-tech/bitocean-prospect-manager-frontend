@@ -9,6 +9,7 @@ export interface ListPlacesQuery {
   nicheSearched?: string;
   firstMessageSent?: "true" | "false";
   googlePrimaryCategoryLike?: string;
+  excludeFirstMessageFailed?: boolean;
 }
 
 export interface PlaceItem {
@@ -24,6 +25,7 @@ export interface PlaceItem {
   state?: string | null;
   firstMessageSent: boolean;
   firstMessageSentAt?: string | null;
+  firstMessageFailed?: boolean;
   enrichmentStatus: "pending" | "enriched" | "failed";
   enrichedAt?: string | null;
   createdAt: string;

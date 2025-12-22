@@ -135,8 +135,8 @@ export class GerenciarProspectsService {
   static async createCampaign(params: {
     placeIds: string[];
     messageTypeId: string;
-    intervalMin: number;
-    intervalMax: number;
+    intervalMin?: number;
+    intervalMax?: number;
     messageTypeName: string;
   }): Promise<CampaignCreateResponse> {
     const {

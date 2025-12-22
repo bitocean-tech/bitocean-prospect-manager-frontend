@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
   const [localNiche, setLocalNiche] = useState(filters.nicheSearched || "all");
   const [localWebsite, setLocalWebsite] = useState(filters.hasWebsite || "all");
   const [localFirstMessage, setLocalFirstMessage] = useState(filters.firstMessageSent || "all");
+  const [localExcludeFailed, setLocalExcludeFailed] = useState(filters.excludeFirstMessageFailed || false);
 
   // Query para carregar nichos
   const {
@@ -60,6 +62,33 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
     setLocalFirstMessage(value);
   };
 
+  const handleExcludeFailedChange = (checked: boolean) => {
+    setLocalExcludeFailed(checked);
+  };
+
+  const handleApplyTemplate = (templateName: string) => {
+    if (templateName === "Venda de Sites") {
+      // Template: Venda de Sites
+      setLocalWebsite("false");
+      setLocalExcludeFailed(true);
+      setLocalFirstMessage("false");
+      
+      // Aplicar filtros automaticamente
+      const appliedFilters: ListPlacesQuery = {
+        ...filters,
+        page: 1,
+        hasWebsite: "false" as 'false',
+        excludeFirstMessageFailed: true,
+        firstMessageSent: "false" as 'false',
+      };
+
+      if (onFilter) {
+        onFilter(appliedFilters);
+      }
+      setFilters(appliedFilters);
+    }
+  };
+
   const handleFilter = () => {
     const appliedFilters: ListPlacesQuery = {
       ...filters,
@@ -70,6 +99,7 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
       nicheSearched: localNiche === "all" ? undefined : localNiche,
       hasWebsite: localWebsite === "all" ? undefined : (localWebsite as 'true' | 'false'),
       firstMessageSent: localFirstMessage === "all" ? undefined : (localFirstMessage as 'true' | 'false'),
+      excludeFirstMessageFailed: localExcludeFailed || undefined,
     };
 
     if (onFilter) {
@@ -85,11 +115,27 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
     setLocalNiche("all");
     setLocalWebsite("all");
     setLocalFirstMessage("all");
+    setLocalExcludeFailed(false);
     clearFilters();
   };
 
   return (
     <div className="space-y-4">
+      {/* Templates de Filtros */}
+      <div className="flex flex-wrap gap-2 pb-2 border-b">
+        <Label className="text-sm font-medium mr-2 self-center">Templates:</Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => handleApplyTemplate("Venda de Sites")}
+          disabled={isLoading}
+          className="h-8"
+        >
+          Venda de Sites
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Estado */}
         <div className="space-y-2">
@@ -192,6 +238,24 @@ export function ProspectsFilters({ onFilter, isLoading = false }: ProspectsFilte
               <SelectItem value="false">Não</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Excluir Primeira Mensagem Falhada */}
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 pt-6">
+            <Checkbox
+              id="excludeFailed"
+              checked={localExcludeFailed}
+              onCheckedChange={handleExcludeFailedChange}
+              disabled={isLoading}
+            />
+            <Label
+              htmlFor="excludeFailed"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Excluir primeira mensagem falhada
+            </Label>
+          </div>
         </div>
       </div>
 

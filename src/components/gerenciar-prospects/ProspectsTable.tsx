@@ -111,6 +111,7 @@ export function ProspectsTable({
             <TableHead>Telefone</TableHead>
             <TableHead>Website</TableHead>
             <TableHead>Primeira Mensagem</TableHead>
+            <TableHead>Primeira Mensagem Falhada</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -169,6 +170,18 @@ export function ProspectsTable({
                   </Badge>
                 ) : (
                   <Badge variant="outline">Não enviada</Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                {item.firstMessageFailed ? (
+                  <Badge
+                    variant="secondary"
+                    className="bg-red-100 text-red-800"
+                  >
+                    Falhou
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">Sem falha</Badge>
                 )}
               </TableCell>
             </TableRow>

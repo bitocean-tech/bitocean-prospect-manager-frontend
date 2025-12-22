@@ -84,8 +84,6 @@ export default function EnvioWhatsappPage() {
 
   // Função para lidar com o envio de mensagens
   const handleSendMessages = () => {
-    if (!sendIntervalKey) return;
-
     const contactsWithPhone = selectedItems.filter(
       (item) => item.normalizedPhoneE164 || item.nationalPhoneNumber
     );
@@ -102,9 +100,15 @@ export default function EnvioWhatsappPage() {
     setIsConfirmModalOpen(false);
     // Criar campanha e logar resposta (sem redirecionar por enquanto)
     try {
-      const [minStr, maxStr] = sendIntervalKey.split("-");
-      const intervalMin = parseInt(minStr, 10);
-      const intervalMax = parseInt(maxStr, 10);
+      let intervalMin: number | undefined;
+      let intervalMax: number | undefined;
+      
+      if (sendIntervalKey) {
+        const [minStr, maxStr] = sendIntervalKey.split("-");
+        intervalMin = parseInt(minStr, 10);
+        intervalMax = parseInt(maxStr, 10);
+      }
+      
       const placeIds = selectedItems.map((i) => i.id);
       const messageTypeName =
         messageTypes.find((t) => t.id === selectedMessageTypeId)?.name || "";
@@ -315,13 +319,15 @@ export default function EnvioWhatsappPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="send-interval">Intervalo entre envios</Label>
+                <Label htmlFor="send-interval">
+                  Intervalo entre envios <span className="text-muted-foreground text-xs">(opcional)</span>
+                </Label>
                 <Select
                   value={sendIntervalKey}
                   onValueChange={setSendIntervalKey}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione o intervalo" />
+                    <SelectValue placeholder="Selecione o intervalo (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
                     {intervalOptions.map((opt, idx) => (
@@ -337,7 +343,6 @@ export default function EnvioWhatsappPage() {
             <Button
               onClick={handleSendMessages}
               disabled={
-                !sendIntervalKey ||
                 !selectedMessageTypeId ||
                 selectedItems.length === 0
               }
@@ -443,18 +448,20 @@ export default function EnvioWhatsappPage() {
                       {selectedItems.length}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-blue-700 dark:text-blue-300">
-                      Intervalo:
-                    </span>
-                    <span className="font-medium text-blue-800 dark:text-blue-200">
-                      {
-                        intervalOptions.find(
-                          (o) => `${o.min}-${o.max}` === sendIntervalKey
-                        )?.name
-                      }
-                    </span>
-                  </div>
+                  {sendIntervalKey && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-blue-700 dark:text-blue-300">
+                        Intervalo:
+                      </span>
+                      <span className="font-medium text-blue-800 dark:text-blue-200">
+                        {
+                          intervalOptions.find(
+                            (o) => `${o.min}-${o.max}` === sendIntervalKey
+                          )?.name
+                        }
+                      </span>
+                    </div>
+                  )}
                   {selectedMessageTypeId && (
                     <div className="flex justify-between text-sm">
                       <span className="text-blue-700 dark:text-blue-300">
