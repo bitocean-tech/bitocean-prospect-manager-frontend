@@ -38,6 +38,25 @@ export interface SearchRequest {
   niche: string;
 }
 
+// Tipos para upload CSV (google-busines-scraper/upload-csv)
+export interface AddedRecord {
+  id: string;
+  externalId: string | null;
+  displayName: string;
+  normalizedPhoneE164: string;
+  city: string | null;
+  state: string | null;
+}
+
+export interface CsvUploadResponse {
+  totalProcessed: number;
+  discardedByWebsite: number;
+  discardedByPhone: number;
+  alreadyExisting: number;
+  addedSuccessfully: number;
+  addedRecords?: AddedRecord[];
+}
+
 // Tipos para autenticação
 export interface AuthValidationResponse {
   valid: boolean;

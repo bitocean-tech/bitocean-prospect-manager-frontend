@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -26,30 +24,49 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
-  Search,
+  Upload,
   Database,
-  Plus,
+  Globe,
+  PhoneOff,
   RotateCcw,
   CheckCircle,
-  XCircle,
-  Clock,
   AlertCircle,
+  FileSpreadsheet,
+  X,
 } from "lucide-react";
+import { BusinessService } from "@/common/services/businessService";
+import type { CsvUploadResponse, Niche } from "@/common/interfaces";
 import {
-  BusinessService,
-  type SearchRequest,
-} from "@/common/services/businessService";
-import type { Niche, SearchResponse } from "@/common/interfaces";
-import { SearchLoadingState } from "@/common/components/SearchLoadingState";
+  SearchLoadingState,
+  csvUploadMessages,
+} from "@/common/components/SearchLoadingState";
+import axios from "axios";
+
+function getUploadErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error) || !error.response?.data) {
+    return "Erro ao processar CSV. Tente novamente.";
+  }
+  const data = error.response.data;
+  if (typeof data === "string") return data;
+  if (
+    data &&
+    typeof data === "object" &&
+    "message" in data &&
+    typeof (data as { message: unknown }).message === "string"
+  ) {
+    return (data as { message: string }).message;
+  }
+  return "Erro ao processar CSV. Tente novamente.";
+}
 
 export default function BuscarNegociosPage() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedNiche, setSelectedNiche] = useState<Niche | null>(null);
-  const [searchResults, setSearchResults] = useState<SearchResponse | null>(
-    null
+  const [uploadResult, setUploadResult] = useState<CsvUploadResponse | null>(
+    null,
   );
 
-  // Query para carregar nichos
   const {
     data: niches,
     isLoading: isLoadingNiches,
@@ -59,68 +76,96 @@ export default function BuscarNegociosPage() {
     queryFn: BusinessService.getNiches,
   });
 
-  // Mutation para busca de negócios
-  const searchMutation = useMutation({
-    mutationFn: (request: SearchRequest) =>
-      BusinessService.searchBusinesses(request),
+  const uploadMutation = useMutation({
+    mutationFn: ({ file, niche }: { file: File; niche: string }) =>
+      BusinessService.uploadCsv(file, niche),
     onSuccess: (data) => {
-      setSearchResults(data);
-      toast.success("Busca realizada com sucesso!");
+      setUploadResult(data);
+      toast.success("Upload realizado com sucesso!");
     },
     onError: (error) => {
-      console.error("Erro na busca:", error);
-      toast.error("Erro ao realizar busca. Tente novamente.");
+      console.error("Erro no upload:", error);
+      toast.error(getUploadErrorMessage(error));
     },
   });
 
-  const handleSearch = () => {
-    if (!searchTerm.trim() || !selectedNiche) {
+  const handleSubmit = () => {
+    if (!selectedFile || !selectedNiche) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
-
-    searchMutation.mutate({
-      query: searchTerm.trim(),
-      niche: selectedNiche?.standardizedName,
+    uploadMutation.mutate({
+      file: selectedFile,
+      niche: selectedNiche.standardizedName,
     });
   };
 
-  const isFormValid = searchTerm.trim() && selectedNiche;
-  const isSearching = searchMutation.isPending;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setSelectedFile(file ?? null);
+  };
+
+  const handleClearFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const isFormValid = !!selectedFile && !!selectedNiche;
+  const isUploading = uploadMutation.isPending;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Buscar negócios</h1>
+        <h1 className="text-3xl font-bold">Importar negócios por CSV</h1>
         <p className="text-muted-foreground">
-          Pesquise negócios por termo e nicho e visualize o relatório da busca.
+          Envie um arquivo CSV e selecione o nicho. Ao final do processamento,
+          visualize o relatório e a lista de registros adicionados.
         </p>
       </div>
 
-      {/* Formulário de Busca */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Formulário de Busca
+            <FileSpreadsheet className="h-5 w-5" />
+            Formulário de Upload
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Termo de busca */}
             <div className="space-y-2">
-              <Label htmlFor="search-term">Termo de busca *</Label>
-              <Input
-                id="search-term"
-                placeholder="Ex: restaurantes, academias, salões..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                disabled={isSearching}
-              />
+              <Label htmlFor="csv-file">Arquivo CSV *</Label>
+              <div className="flex gap-2 items-center">
+                <input
+                  ref={fileInputRef}
+                  id="csv-file"
+                  type="file"
+                  accept=".csv,text/csv,application/vnd.ms-excel,text/plain,application/csv"
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                {selectedFile && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClearFile}
+                    disabled={isUploading}
+                    aria-label="Remover arquivo"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {selectedFile && (
+                <p className="text-sm text-muted-foreground">
+                  {selectedFile.name}
+                </p>
+              )}
             </div>
 
-            {/* Select de Nicho */}
             <div className="space-y-2">
               <Label htmlFor="niche-select">Nicho *</Label>
               {isLoadingNiches ? (
@@ -130,12 +175,10 @@ export default function BuscarNegociosPage() {
                   value={selectedNiche?.standardizedName}
                   onValueChange={(value) =>
                     setSelectedNiche(
-                      niches?.find(
-                        (niche) => niche.standardizedName === value
-                      ) || null
+                      niches?.find((n) => n.standardizedName === value) ?? null,
                     )
                   }
-                  disabled={isSearching}
+                  disabled={isUploading}
                 >
                   <SelectTrigger id="niche-select">
                     <SelectValue placeholder="Selecione um nicho" />
@@ -152,7 +195,6 @@ export default function BuscarNegociosPage() {
             </div>
           </div>
 
-          {/* Erro ao carregar nichos */}
           {nichesError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -162,32 +204,30 @@ export default function BuscarNegociosPage() {
             </Alert>
           )}
 
-          {/* Botão de busca */}
           <Button
-            onClick={handleSearch}
-            disabled={!isFormValid || isSearching}
+            onClick={handleSubmit}
+            disabled={!isFormValid || isUploading}
             className="w-full md:w-auto"
           >
-            {isSearching ? (
+            {isUploading ? (
               <>
                 <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
-                Buscando...
+                Processando...
               </>
             ) : (
               <>
-                <Search className="mr-2 h-4 w-4" />
-                Buscar
+                <Upload className="mr-2 h-4 w-4" />
+                Enviar
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Cards de Métricas */}
-      {isSearching ? (
-        <SearchLoadingState />
+      {isUploading ? (
+        <SearchLoadingState messages={csvUploadMessages} />
       ) : (
-        searchResults && (
+        uploadResult && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-6">
@@ -195,10 +235,10 @@ export default function BuscarNegociosPage() {
                   <Database className="h-5 w-5 text-blue-500" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Total Encontrado
+                      Total processado
                     </p>
                     <p className="text-2xl font-bold">
-                      {searchResults.totalFetched}
+                      {uploadResult.totalProcessed}
                     </p>
                   </div>
                 </div>
@@ -208,13 +248,29 @@ export default function BuscarNegociosPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center space-x-2">
-                  <Plus className="h-5 w-5 text-green-500" />
+                  <Globe className="h-5 w-5 text-amber-500" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Novos Salvos
+                      Descartados por site
                     </p>
                     <p className="text-2xl font-bold">
-                      {searchResults.newSavedCount}
+                      {uploadResult.discardedByWebsite}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-2">
+                  <PhoneOff className="h-5 w-5 text-red-500" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Descartados por telefone
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {uploadResult.discardedByPhone}
                     </p>
                   </div>
                 </div>
@@ -227,10 +283,10 @@ export default function BuscarNegociosPage() {
                   <RotateCcw className="h-5 w-5 text-orange-500" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Já Existentes
+                      Já existentes
                     </p>
                     <p className="text-2xl font-bold">
-                      {searchResults.alreadyExistingCount}
+                      {uploadResult.alreadyExisting}
                     </p>
                   </div>
                 </div>
@@ -243,42 +299,10 @@ export default function BuscarNegociosPage() {
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Enriquecidos
+                      Adicionados com sucesso
                     </p>
                     <p className="text-2xl font-bold">
-                      {searchResults.enrichedCount}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-2">
-                  <XCircle className="h-5 w-5 text-red-500" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Falharam
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {searchResults.failedCount}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-5 w-5 text-yellow-500" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Pendentes
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {searchResults.pendingCount}
+                      {uploadResult.addedSuccessfully}
                     </p>
                   </div>
                 </div>
@@ -288,17 +312,17 @@ export default function BuscarNegociosPage() {
         )
       )}
 
-      {/* Tabela de Resultados */}
-      {!isSearching && searchResults && (
+      {!isUploading && uploadResult && (
         <Card>
           <CardHeader>
-            <CardTitle>Resultados da Busca</CardTitle>
+            <CardTitle>Registros adicionados</CardTitle>
           </CardHeader>
           <CardContent>
-            {searchResults.items.length === 0 ? (
+            {uploadResult.addedSuccessfully === 0 ||
+            !uploadResult.addedRecords?.length ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
-                  Nenhum resultado encontrado.
+                  Nenhum registro novo adicionado.
                 </p>
               </div>
             ) : (
@@ -307,22 +331,20 @@ export default function BuscarNegociosPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Cidade</TableHead>
+                      <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {searchResults.items.map((item) => (
-                      <TableRow key={item.googlePlaceId}>
+                    {(uploadResult.addedRecords ?? []).map((item) => (
+                      <TableRow key={item.id}>
                         <TableCell className="font-medium">
                           {item.displayName}
                         </TableCell>
-                        <TableCell>
-                          {item.googlePrimaryCategory || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">novo</Badge>
-                        </TableCell>
+                        <TableCell>{item.normalizedPhoneE164}</TableCell>
+                        <TableCell>{item.city ?? "-"}</TableCell>
+                        <TableCell>{item.state ?? "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

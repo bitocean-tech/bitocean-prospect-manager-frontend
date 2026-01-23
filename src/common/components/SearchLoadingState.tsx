@@ -9,13 +9,23 @@ import {
   BarChart3,
   Cpu,
   CheckCircle,
+  Upload,
+  FileSpreadsheet,
+  Filter,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+interface MessageItem {
+  text: string;
+  icon: LucideIcon;
+}
 
 interface SearchLoadingStateProps {
   className?: string;
+  messages?: MessageItem[];
 }
 
-const loadingMessages = [
+const defaultLoadingMessages: MessageItem[] = [
   { text: "Buscando negócios...", icon: Search },
   { text: "Alimentando banco de dados...", icon: Database },
   { text: "Comparando resultados encontrados...", icon: BarChart3 },
@@ -23,9 +33,21 @@ const loadingMessages = [
   { text: "Finalizando busca...", icon: CheckCircle },
 ];
 
-export function SearchLoadingState({ className }: SearchLoadingStateProps) {
+export const csvUploadMessages: MessageItem[] = [
+  { text: "Enviando arquivo...", icon: Upload },
+  { text: "Processando CSV...", icon: FileSpreadsheet },
+  { text: "Validando registros...", icon: Filter },
+  { text: "Alimentando banco de dados...", icon: Database },
+  { text: "Finalizando...", icon: CheckCircle },
+];
+
+export function SearchLoadingState({
+  className,
+  messages = defaultLoadingMessages,
+}: SearchLoadingStateProps) {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const loadingMessages = messages;
 
   // Rotação das mensagens a cada 3.5 segundos
   useEffect(() => {
@@ -34,7 +56,7 @@ export function SearchLoadingState({ className }: SearchLoadingStateProps) {
     }, 3500);
 
     return () => clearInterval(messageInterval);
-  }, []);
+  }, [loadingMessages.length]);
 
   // Contador de tempo
   useEffect(() => {
