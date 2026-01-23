@@ -33,6 +33,8 @@ import {
   AlertCircle,
   FileSpreadsheet,
   X,
+  FileUp,
+  Layers,
 } from "lucide-react";
 import { BusinessService } from "@/common/services/businessService";
 import type { CsvUploadResponse, Niche } from "@/common/interfaces";
@@ -41,6 +43,7 @@ import {
   csvUploadMessages,
 } from "@/common/components/SearchLoadingState";
 import axios from "axios";
+import { cn } from "@/lib/utils";
 
 function getUploadErrorMessage(error: unknown): string {
   if (!axios.isAxiosError(error) || !error.response?.data) {
@@ -125,78 +128,152 @@ export default function BuscarNegociosPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5" />
+      <Card className="overflow-hidden border-0 bg-linear-to-br from-card via-card to-muted/30 shadow-lg shadow-primary/5 dark:shadow-primary/10">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-3 text-xl font-semibold tracking-tight">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <FileSpreadsheet className="size-5" />
+            </span>
             Formulário de Upload
           </CardTitle>
+          <p className="text-sm text-muted-foreground pl-[52px] -mt-1">
+            Envie seu CSV e escolha o nicho para processar os negócios.
+          </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-5 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <Label htmlFor="csv-file">Arquivo CSV *</Label>
-              <div className="flex gap-2 items-center">
-                <input
-                  ref={fileInputRef}
-                  id="csv-file"
-                  type="file"
-                  accept=".csv,text/csv,application/vnd.ms-excel,text/plain,application/csv"
-                  onChange={handleFileChange}
-                  disabled={isUploading}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                {selectedFile && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleClearFile}
-                    disabled={isUploading}
-                    aria-label="Remover arquivo"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              {selectedFile && (
-                <p className="text-sm text-muted-foreground">
-                  {selectedFile.name}
-                </p>
+              <Label
+                htmlFor="csv-file"
+                className="text-sm font-medium text-foreground/90"
+              >
+                Arquivo CSV *
+              </Label>
+              <input
+                ref={fileInputRef}
+                id="csv-file"
+                type="file"
+                accept=".csv,text/csv,application/vnd.ms-excel,text/plain,application/csv"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                className="sr-only"
+              />
+              {selectedFile ? (
+                <div
+                  className={cn(
+                    "group relative flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-primary/20 bg-primary/5 px-4 py-5 transition-all",
+                    !isUploading &&
+                      "hover:border-primary/30 hover:bg-primary/10 cursor-pointer",
+                  )}
+                  onClick={() =>
+                    !isUploading && fileInputRef.current?.click()
+                  }
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) =>
+                    !isUploading &&
+                    (e.key === "Enter" || e.key === " ") &&
+                    fileInputRef.current?.click()
+                  }
+                >
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                    <FileUp className="size-6" />
+                  </div>
+                  <p className="max-w-full truncate text-center text-sm font-medium text-foreground">
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Clique para trocar ou remova abaixo
+                  </p>
+                  {!isUploading && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-2 size-8 rounded-lg opacity-70 hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearFile();
+                      }}
+                      aria-label="Remover arquivo"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <label
+                  htmlFor="csv-file"
+                  className={cn(
+                    "group flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-input bg-muted/30 px-4 py-5 transition-all",
+                    "hover:border-primary/40 hover:bg-muted/50",
+                    "focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40",
+                    isUploading && "pointer-events-none opacity-60",
+                  )}
+                >
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                    <Upload className="size-6" />
+                  </div>
+                  <span className="text-center text-sm font-medium text-foreground">
+                    Clique ou arraste o arquivo
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    .csv, .txt ou planilha
+                  </span>
+                </label>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="niche-select">Nicho *</Label>
+              <Label
+                htmlFor="niche-select"
+                className="text-sm font-medium text-foreground/90"
+              >
+                Nicho *
+              </Label>
               {isLoadingNiches ? (
-                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-[120px] w-full rounded-xl" />
               ) : (
-                <Select
-                  value={selectedNiche?.standardizedName}
-                  onValueChange={(value) =>
-                    setSelectedNiche(
-                      niches?.find((n) => n.standardizedName === value) ?? null,
-                    )
-                  }
-                  disabled={isUploading}
-                >
-                  <SelectTrigger id="niche-select">
-                    <SelectValue placeholder="Selecione um nicho" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {niches?.map((niche) => (
-                      <SelectItem key={niche.id} value={niche.standardizedName}>
-                        {niche.displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
+                    <Layers className="size-4 text-muted-foreground" />
+                  </div>
+                  <Select
+                    value={selectedNiche?.standardizedName}
+                    onValueChange={(value) =>
+                      setSelectedNiche(
+                        niches?.find(
+                          (n) => n.standardizedName === value,
+                        ) ?? null,
+                      )
+                    }
+                    disabled={isUploading}
+                  >
+                    <SelectTrigger
+                      id="niche-select"
+                      className="h-[120px] w-full rounded-xl border-2 border-input bg-muted/30 pl-10 text-left transition-all hover:border-primary/30 hover:bg-muted/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/20 data-placeholder:text-muted-foreground"
+                    >
+                      <SelectValue placeholder="Selecione um nicho" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {niches?.map((niche) => (
+                        <SelectItem
+                          key={niche.id}
+                          value={niche.standardizedName}
+                          className="rounded-lg py-2.5"
+                        >
+                          {niche.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
             </div>
           </div>
 
           {nichesError && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="rounded-xl">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Erro ao carregar nichos. Recarregue a página e tente novamente.
@@ -204,23 +281,31 @@ export default function BuscarNegociosPage() {
             </Alert>
           )}
 
-          <Button
-            onClick={handleSubmit}
-            disabled={!isFormValid || isUploading}
-            className="w-full md:w-auto"
-          >
-            {isUploading ? (
-              <>
-                <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
-                Processando...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Enviar
-              </>
+          <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
+            <Button
+              onClick={handleSubmit}
+              disabled={!isFormValid || isUploading}
+              size="lg"
+              className="h-11 rounded-xl px-6 font-medium shadow-md transition-all hover:shadow-lg disabled:shadow-none"
+            >
+              {isUploading ? (
+                <>
+                  <RotateCcw className="size-4 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <Upload className="size-4" />
+                  Enviar
+                </>
+              )}
+            </Button>
+            {isFormValid && !isUploading && (
+              <p className="text-sm text-muted-foreground">
+                Pronto para enviar o arquivo.
+              </p>
             )}
-          </Button>
+          </div>
         </CardContent>
       </Card>
 
