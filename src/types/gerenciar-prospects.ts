@@ -83,7 +83,7 @@ export interface CampaignCreateResponse {
 }
 
 // Campaigns - listagem e tipos
-export type CampaignStatus = "pending" | "in_progress" | "completed" | "failed";
+export type CampaignStatus = "pending" | "in_progress" | "completed" | "failed" | "interrupted";
 
 export interface Campaign {
   id: string;
@@ -177,4 +177,14 @@ export interface GetCampaignPhonesDto {
 export interface GetCampaignPhonesResponse {
   phonesE164: string[];
   phonesWithoutPlus: string[];
+}
+
+// WhatsApp Instances
+export interface WhatsAppInstance {
+  id: string;
+  status: string;
+  qrcode: string;
+  name: string;
+  profileName: string;
+  profilePicUrl: string;
 }

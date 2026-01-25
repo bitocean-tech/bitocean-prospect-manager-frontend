@@ -1,1 +1,1 @@
-export const admPhoneNumbers = ["+5511946974555", "+5511932117880"];
+export const admPhoneNumbers = ["5511946974555", "5511932117880"];

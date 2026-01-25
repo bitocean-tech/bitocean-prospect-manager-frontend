@@ -22,6 +22,7 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  PauseCircle,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -36,6 +37,7 @@ const STATUS_OPTIONS: Array<{ label: string; value: CampaignStatus | "all" }> =
     { label: "Em andamento", value: "in_progress" },
     { label: "Concluída", value: "completed" },
     { label: "Falhou", value: "failed" },
+    { label: "Interrompida", value: "interrupted" },
   ];
 
 function formatDateTime(value?: string | null): string {
@@ -187,6 +189,8 @@ export default function CampanhasPage() {
                 ? "Em andamento"
                 : c.status === "failed"
                 ? "Falhou"
+                : c.status === "interrupted"
+                ? "Interrompida"
                 : "Pendente";
             const statusClass =
               c.status === "completed"
@@ -195,6 +199,8 @@ export default function CampanhasPage() {
                 ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
                 : c.status === "failed"
                 ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+                : c.status === "interrupted"
+                ? "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300"
                 : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300";
             return (
               <Card
@@ -248,6 +254,8 @@ export default function CampanhasPage() {
                             <CheckCircle2 className="h-3 w-3" />
                           ) : c.status === "failed" ? (
                             <XCircle className="h-3 w-3" />
+                          ) : c.status === "interrupted" ? (
+                            <PauseCircle className="h-3 w-3" />
                           ) : (
                             <Clock className="h-3 w-3" />
                           )}

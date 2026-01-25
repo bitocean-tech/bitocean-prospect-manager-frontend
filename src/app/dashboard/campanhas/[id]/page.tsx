@@ -72,7 +72,8 @@ export default function CampanhaDetalhesPage() {
     refetchInterval: (query) => {
       const c = query.state.data as Campaign | undefined;
       if (!c) return false;
-      // Não fazer polling para campanhas externas
+      // Não fazer polling para campanhas externas ou status finais (completed, failed, interrupted)
+      // Apenas fazer polling para campanhas em andamento
       return c.status === "in_progress" && !c.isExternal ? 3000 : false;
     },
   });
@@ -92,6 +93,8 @@ export default function CampanhaDetalhesPage() {
       }),
     enabled: !!id,
     refetchInterval:
+      // Apenas fazer polling para campanhas em andamento
+      // Não fazer polling para status finais (completed, failed, interrupted) ou campanhas externas
       data?.status === "in_progress" && !data?.isExternal ? 3000 : false,
   });
 
@@ -124,7 +127,7 @@ export default function CampanhaDetalhesPage() {
     },
   });
 
-  // Force a final refresh after campaign leaves in_progress
+  // Force a final refresh after campaign leaves in_progress (completed, failed, interrupted, etc)
   useEffect(() => {
     if (!id) return;
     if (data?.status && data.status !== "in_progress") {
@@ -159,6 +162,8 @@ export default function CampanhaDetalhesPage() {
       ? "Em andamento"
       : data?.status === "failed"
       ? "Falhou"
+      : data?.status === "interrupted"
+      ? "Interrompida"
       : "Pendente";
 
   const isExternal = data?.isExternal ?? false;
@@ -296,6 +301,8 @@ export default function CampanhaDetalhesPage() {
                   ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
                   : data?.status === "failed"
                   ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+                  : data?.status === "interrupted"
+                  ? "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300"
                   : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
               }`}
             >

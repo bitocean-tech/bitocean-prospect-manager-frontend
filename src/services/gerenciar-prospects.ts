@@ -16,6 +16,7 @@ import type {
   UpdateRecipientsResponse,
   GetCampaignPhonesDto,
   GetCampaignPhonesResponse,
+  WhatsAppInstance,
 } from "@/types/gerenciar-prospects";
 import { admPhoneNumbers } from "@/common/constants/admPhoneNumbers";
 
@@ -138,6 +139,7 @@ export class GerenciarProspectsService {
     intervalMin?: number;
     intervalMax?: number;
     messageTypeName: string;
+    whatsappInstanceId: string;
   }): Promise<CampaignCreateResponse> {
     const {
       placeIds,
@@ -145,6 +147,7 @@ export class GerenciarProspectsService {
       intervalMin,
       intervalMax,
       messageTypeName,
+      whatsappInstanceId,
     } = params;
 
     const now = new Date();
@@ -164,6 +167,7 @@ export class GerenciarProspectsService {
         intervalMax,
         name,
         notifyPhones: admPhoneNumbers,
+        whatsappInstanceId,
       }
     );
     return response.data;
@@ -225,6 +229,16 @@ export class GerenciarProspectsService {
     const response = await apiClient.post<GetCampaignPhonesResponse>(
       `/campaigns/${campaignId}/phones`,
       params || {}
+    );
+    return response.data;
+  }
+
+  /**
+   * Busca lista de instâncias do WhatsApp
+   */
+  static async getWhatsAppInstances(): Promise<WhatsAppInstance[]> {
+    const response = await apiClient.get<WhatsAppInstance[]>(
+      "/whatsapp/instances"
     );
     return response.data;
   }

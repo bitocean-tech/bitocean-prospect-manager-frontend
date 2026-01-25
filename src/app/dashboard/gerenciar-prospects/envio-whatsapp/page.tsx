@@ -40,6 +40,8 @@ export default function EnvioWhatsappPage() {
   const [selectedMessageTypeId, setSelectedMessageTypeId] =
     useState<string>("");
   const [sendIntervalKey, setSendIntervalKey] = useState<string>("");
+  const [selectedWhatsAppInstanceId, setSelectedWhatsAppInstanceId] =
+    useState<string>("");
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
 
   // Message Types
@@ -62,7 +64,7 @@ export default function EnvioWhatsappPage() {
     queryFn: () =>
       selectedMessageTypeId
         ? GerenciarProspectsService.getTemplatesByMessageType(
-            selectedMessageTypeId
+            selectedMessageTypeId,
           )
         : Promise.resolve([]),
     enabled: !!selectedMessageTypeId,
@@ -73,6 +75,21 @@ export default function EnvioWhatsappPage() {
     queryKey: ["sendIntervalOptions"],
     queryFn: GerenciarProspectsService.getSendIntervalOptions,
   });
+
+  // Instâncias do WhatsApp
+  const {
+    data: whatsappInstances = [],
+    isLoading: isLoadingWhatsAppInstances,
+    error: whatsappInstancesError,
+  } = useQuery({
+    queryKey: ["whatsappInstances"],
+    queryFn: GerenciarProspectsService.getWhatsAppInstances,
+  });
+
+  // Filtrar apenas instâncias conectadas
+  const connectedInstances = whatsappInstances.filter(
+    (instance) => instance.status === "connected",
+  );
 
   const handleGoBack = () => {
     router.push("/dashboard/gerenciar-prospects");
@@ -85,7 +102,7 @@ export default function EnvioWhatsappPage() {
   // Função para lidar com o envio de mensagens
   const handleSendMessages = () => {
     const contactsWithPhone = selectedItems.filter(
-      (item) => item.normalizedPhoneE164 || item.nationalPhoneNumber
+      (item) => item.normalizedPhoneE164 || item.nationalPhoneNumber,
     );
 
     if (contactsWithPhone.length === 0) {
@@ -102,13 +119,13 @@ export default function EnvioWhatsappPage() {
     try {
       let intervalMin: number | undefined;
       let intervalMax: number | undefined;
-      
+
       if (sendIntervalKey) {
         const [minStr, maxStr] = sendIntervalKey.split("-");
         intervalMin = parseInt(minStr, 10);
         intervalMax = parseInt(maxStr, 10);
       }
-      
+
       const placeIds = selectedItems.map((i) => i.id);
       const messageTypeName =
         messageTypes.find((t) => t.id === selectedMessageTypeId)?.name || "";
@@ -118,9 +135,9 @@ export default function EnvioWhatsappPage() {
         intervalMin,
         intervalMax,
         messageTypeName,
+        whatsappInstanceId: selectedWhatsAppInstanceId,
       })
         .then((resp) => {
-          console.log(resp);
           if (resp?.campaignId) {
             router.push(`/dashboard/campanhas/${resp.campaignId}`);
           }
@@ -291,6 +308,43 @@ export default function EnvioWhatsappPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="whatsapp-instance-select">
+                  Instância do WhatsApp{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                {whatsappInstancesError && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Erro ao carregar instâncias. Tente novamente.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <Select
+                  value={selectedWhatsAppInstanceId}
+                  onValueChange={setSelectedWhatsAppInstanceId}
+                  disabled={isLoadingWhatsAppInstances}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione uma instância" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {connectedInstances.length === 0 &&
+                      !isLoadingWhatsAppInstances && (
+                        <SelectItem value="no-instance" disabled>
+                          Nenhuma instância conectada disponível
+                        </SelectItem>
+                      )}
+                    {connectedInstances.map((instance) => (
+                      <SelectItem key={instance.id} value={instance.id}>
+                        {instance.name} ({instance.profileName})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="message-type-select">Tipo de Mensagem</Label>
                 {messageTypesError && (
                   <Alert>
@@ -317,10 +371,15 @@ export default function EnvioWhatsappPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="send-interval">
-                  Intervalo entre envios <span className="text-muted-foreground text-xs">(opcional)</span>
+                  Intervalo entre envios{" "}
+                  <span className="text-muted-foreground text-xs">
+                    (opcional)
+                  </span>
                 </Label>
                 <Select
                   value={sendIntervalKey}
@@ -343,6 +402,7 @@ export default function EnvioWhatsappPage() {
             <Button
               onClick={handleSendMessages}
               disabled={
+                !selectedWhatsAppInstanceId ||
                 !selectedMessageTypeId ||
                 selectedItems.length === 0
               }
@@ -456,7 +516,7 @@ export default function EnvioWhatsappPage() {
                       <span className="font-medium text-blue-800 dark:text-blue-200">
                         {
                           intervalOptions.find(
-                            (o) => `${o.min}-${o.max}` === sendIntervalKey
+                            (o) => `${o.min}-${o.max}` === sendIntervalKey,
                           )?.name
                         }
                       </span>
@@ -470,7 +530,21 @@ export default function EnvioWhatsappPage() {
                       <span className="font-medium text-blue-800 dark:text-blue-200">
                         {
                           messageTypes.find(
-                            (t) => t.id === selectedMessageTypeId
+                            (t) => t.id === selectedMessageTypeId,
+                          )?.name
+                        }
+                      </span>
+                    </div>
+                  )}
+                  {selectedWhatsAppInstanceId && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-blue-700 dark:text-blue-300">
+                        Instância WhatsApp:
+                      </span>
+                      <span className="font-medium text-blue-800 dark:text-blue-200">
+                        {
+                          connectedInstances.find(
+                            (i) => i.id === selectedWhatsAppInstanceId,
                           )?.name
                         }
                       </span>
