@@ -82,8 +82,8 @@ export default function CampanhasPage() {
           isExternal === "all"
             ? undefined
             : isExternal === "true"
-            ? true
-            : false,
+              ? true
+              : false,
       }),
   });
 
@@ -186,22 +186,22 @@ export default function CampanhasPage() {
               c.status === "completed"
                 ? "Concluída"
                 : c.status === "in_progress"
-                ? "Em andamento"
-                : c.status === "failed"
-                ? "Falhou"
-                : c.status === "interrupted"
-                ? "Interrompida"
-                : "Pendente";
+                  ? "Em andamento"
+                  : c.status === "failed"
+                    ? "Falhou"
+                    : c.status === "interrupted"
+                      ? "Interrompida"
+                      : "Pendente";
             const statusClass =
               c.status === "completed"
                 ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300"
                 : c.status === "in_progress"
-                ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
-                : c.status === "failed"
-                ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
-                : c.status === "interrupted"
-                ? "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300"
-                : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300";
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
+                  : c.status === "failed"
+                    ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+                    : c.status === "interrupted"
+                      ? "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300"
+                      : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300";
             return (
               <Card
                 key={c.id}

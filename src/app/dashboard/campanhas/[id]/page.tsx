@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   XCircle,
   Phone,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -56,7 +57,7 @@ export default function CampanhaDetalhesPage() {
   const queryClient = useQueryClient();
 
   const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [recStatusFilter, setRecStatusFilter] = useState<
     CampaignRecipientStatus | "all"
@@ -64,6 +65,7 @@ export default function CampanhaDetalhesPage() {
   const [recPage, setRecPage] = useState<number>(1);
   const [recPageSize, setRecPageSize] = useState<number>(10);
   const [isCopyPhonesModalOpen, setIsCopyPhonesModalOpen] = useState(false);
+  const [isDownloadingCsv, setIsDownloadingCsv] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["campaign", id],
@@ -159,12 +161,12 @@ export default function CampanhaDetalhesPage() {
     data?.status === "completed"
       ? "Concluída"
       : data?.status === "in_progress"
-      ? "Em andamento"
-      : data?.status === "failed"
-      ? "Falhou"
-      : data?.status === "interrupted"
-      ? "Interrompida"
-      : "Pendente";
+        ? "Em andamento"
+        : data?.status === "failed"
+          ? "Falhou"
+          : data?.status === "interrupted"
+            ? "Interrompida"
+            : "Pendente";
 
   const isExternal = data?.isExternal ?? false;
 
@@ -174,7 +176,7 @@ export default function CampanhaDetalhesPage() {
     currentPageRecipients.length > 0 &&
     currentPageRecipients.every((r) => selectedRecipients.has(r.id));
   const someCurrentPageSelected = currentPageRecipients.some((r) =>
-    selectedRecipients.has(r.id)
+    selectedRecipients.has(r.id),
   );
 
   const handleSelectAll = (checked: boolean) => {
@@ -259,6 +261,43 @@ export default function CampanhaDetalhesPage() {
     setIsCopyPhonesModalOpen(true);
   };
 
+  const handleDownloadCsv = async () => {
+    if (isDownloadingCsv) return;
+
+    setIsDownloadingCsv(true);
+    try {
+      const blob =
+        await GerenciarProspectsService.downloadCampaignRecipientsCsv(id);
+
+      // Criar URL do blob
+      const url = URL.createObjectURL(blob);
+
+      // Criar link temporário para download
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = data?.name
+        ? `${data.name.replace(/[^a-z0-9]/gi, "_")}_recipients.csv`
+        : `campanha-${id}-recipients.csv`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Limpar
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("CSV exportado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao exportar CSV:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro ao exportar CSV. Tente novamente.",
+      );
+    } finally {
+      setIsDownloadingCsv(false);
+    }
+  };
+
   const isUpdating = updateRecipientsMutation.isPending;
 
   return (
@@ -298,12 +337,12 @@ export default function CampanhaDetalhesPage() {
                 data?.status === "completed"
                   ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300"
                   : data?.status === "in_progress"
-                  ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
-                  : data?.status === "failed"
-                  ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
-                  : data?.status === "interrupted"
-                  ? "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300"
-                  : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+                    ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
+                    : data?.status === "failed"
+                      ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+                      : data?.status === "interrupted"
+                        ? "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300"
+                        : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
               }`}
             >
               {statusLabel}
@@ -511,6 +550,13 @@ export default function CampanhaDetalhesPage() {
                     {selectedRecipients.size > 0 ? (
                       <>
                         <DropdownMenuItem
+                          onClick={handleDownloadCsv}
+                          disabled={isDownloadingCsv || isUpdating}
+                        >
+                          <Download className="h-4 w-4 mr-2 text-blue-600" />
+                          Exportar CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={handleCopyPhones}
                           disabled={isUpdating}
                         >
@@ -541,6 +587,13 @@ export default function CampanhaDetalhesPage() {
                       </>
                     ) : (
                       <>
+                        <DropdownMenuItem
+                          onClick={handleDownloadCsv}
+                          disabled={isDownloadingCsv || isUpdating}
+                        >
+                          <Download className="h-4 w-4 mr-2 text-blue-600" />
+                          Exportar CSV
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={handleCopyPhones}
                           disabled={isUpdating}
@@ -573,10 +626,12 @@ export default function CampanhaDetalhesPage() {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                {isUpdating && (
+                {(isUpdating || isDownloadingCsv) && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Atualizando...</span>
+                    <span>
+                      {isDownloadingCsv ? "Exportando..." : "Atualizando..."}
+                    </span>
                   </div>
                 )}
               </div>
@@ -676,15 +731,15 @@ export default function CampanhaDetalhesPage() {
                         r.status === "sent"
                           ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300"
                           : r.status === "failed"
-                          ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
-                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+                            ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+                            : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
                       }`}
                     >
                       {r.status === "sent"
                         ? "Enviado"
                         : r.status === "failed"
-                        ? "Falhou"
-                        : "Pendente"}
+                          ? "Falhou"
+                          : "Pendente"}
                     </Badge>
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
@@ -703,7 +758,7 @@ export default function CampanhaDetalhesPage() {
               {(recipientsData.page - 1) * recipientsData.pageSize + 1} a{" "}
               {Math.min(
                 recipientsData.page * recipientsData.pageSize,
-                recipientsData.total
+                recipientsData.total,
               )}{" "}
               de {recipientsData.total} resultados
             </div>
@@ -749,7 +804,7 @@ export default function CampanhaDetalhesPage() {
                   size="sm"
                   onClick={() =>
                     setRecPage((p: number) =>
-                      Math.min(recipientsData.totalPages, p + 1)
+                      Math.min(recipientsData.totalPages, p + 1),
                     )
                   }
                   disabled={

@@ -1,4 +1,5 @@
 import { apiClient } from "@/common/services/apiClient";
+import { getAccessKey } from "@/common/helpers/cookies";
 import type { Niche } from "@/common/interfaces";
 import type {
   ListPlacesQuery,
@@ -239,6 +240,23 @@ export class GerenciarProspectsService {
   static async getWhatsAppInstances(): Promise<WhatsAppInstance[]> {
     const response = await apiClient.get<WhatsAppInstance[]>(
       "/whatsapp/instances"
+    );
+    return response.data;
+  }
+
+  /**
+   * Faz download do CSV de recipients de uma campanha
+   */
+  static async downloadCampaignRecipientsCsv(campaignId: string): Promise<Blob> {
+    const accessKey = getAccessKey();
+    const response = await apiClient.get(
+      `/campaigns/${campaignId}/recipients/csv`,
+      {
+        responseType: "blob",
+        headers: {
+          "x-api-key": accessKey || "",
+        },
+      }
     );
     return response.data;
   }
